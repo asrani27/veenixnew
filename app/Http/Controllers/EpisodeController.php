@@ -132,21 +132,40 @@ class EpisodeController extends Controller
                 return response()->json(['error' => 'No file uploaded'], 400);
             }
 
+            // Validate file type and size on first chunk
+            if ($chunkNumber == 1) {
+                $this->validateFile($file, $filename, $totalSize);
+            }
+
             // Create temporary directory for chunks
             $tempDir = storage_path('app/temp/resumable/' . $identifier);
             if (!file_exists($tempDir)) {
                 mkdir($tempDir, 0755, true);
             }
 
-            // Save chunk
-            $chunkPath = $tempDir . '/' . $chunkNumber;
+            // Save chunk with proper padding for consistent ordering
+            $chunkPath = $tempDir . '/chunk_' . str_pad($chunkNumber, 6, '0', STR_PAD_LEFT) . '.part';
             move_uploaded_file($file->getPathname(), $chunkPath);
 
+            // Log progress
+            Log::info('Chunk uploaded', [
+                'episode_id' => $episode->id,
+                'chunk_number' => $chunkNumber,
+                'total_chunks' => $totalChunks,
+                'identifier' => $identifier
+            ]);
+
             // Check if all chunks are uploaded
-            $uploadedChunks = glob($tempDir . '/*');
+            $uploadedChunks = glob($tempDir . '/chunk_*.part');
             if (count($uploadedChunks) == $totalChunks) {
+                Log::info('All chunks uploaded, starting merge', [
+                    'episode_id' => $episode->id,
+                    'total_chunks' => $totalChunks,
+                    'filename' => $filename
+                ]);
+
                 // Merge chunks into final file
-                $finalFilename = time() . '_' . $filename;
+                $finalFilename = time() . '_' . $this->sanitizeFilename($filename);
                 $finalPath = storage_path('app/videos/episodes/' . $finalFilename);
                 
                 // Ensure videos/episodes directory exists
@@ -155,16 +174,35 @@ class EpisodeController extends Controller
                     mkdir($videosDir, 0755, true);
                 }
 
-                // Merge chunks
+                // Merge chunks in correct order
                 $finalFile = fopen($finalPath, 'wb');
                 for ($i = 1; $i <= $totalChunks; $i++) {
-                    $chunkFile = $tempDir . '/' . $i;
+                    $chunkFile = $tempDir . '/chunk_' . str_pad($i, 6, '0', STR_PAD_LEFT) . '.part';
                     if (file_exists($chunkFile)) {
                         $chunkData = file_get_contents($chunkFile);
+                        if ($chunkData === false) {
+                            fclose($finalFile);
+                            unlink($finalPath);
+                            $this->cleanUpChunks($tempDir);
+                            throw new \Exception("Failed to read chunk {$i}");
+                        }
                         fwrite($finalFile, $chunkData);
+                    } else {
+                        fclose($finalFile);
+                        unlink($finalPath);
+                        $this->cleanUpChunks($tempDir);
+                        throw new \Exception("Missing chunk {$i}");
                     }
                 }
                 fclose($finalFile);
+
+                // Verify final file size
+                $finalFileSize = filesize($finalPath);
+                if ($finalFileSize != $totalSize) {
+                    unlink($finalPath);
+                    $this->cleanUpChunks($tempDir);
+                    throw new \Exception("File size mismatch. Expected: {$totalSize}, Got: {$finalFileSize}");
+                }
 
                 // Clean up chunks
                 $this->cleanUpChunks($tempDir);
@@ -179,6 +217,12 @@ class EpisodeController extends Controller
                     'hls_processed_at' => null
                 ]);
 
+                Log::info('File merged successfully, starting HLS conversion', [
+                    'episode_id' => $episode->id,
+                    'file_path' => $relativePath,
+                    'file_size' => $finalFileSize
+                ]);
+
                 // Dispatch HLS conversion job
                 ConvertEpisodeToHlsJob::dispatch($episode);
 
@@ -186,16 +230,18 @@ class EpisodeController extends Controller
                     'success' => true,
                     'message' => 'Video uploaded successfully and HLS conversion started',
                     'filename' => $finalFilename,
-                    'path' => $relativePath
+                    'path' => $relativePath,
+                    'size' => $finalFileSize
                 ]);
             }
 
-            return response()->json(['success' => true, 'message' => 'Chunk uploaded']);
+            return response()->json(['success' => true, 'message' => 'Chunk uploaded successfully']);
 
         } catch (\Exception $e) {
             Log::error('Failed to handle resumable upload', [
                 'episode_id' => $episode->id,
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
@@ -203,6 +249,56 @@ class EpisodeController extends Controller
                 'error' => 'Upload failed: ' . $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Validate file type and size
+     */
+    private function validateFile($file, $filename, $totalSize)
+    {
+        // Check file size (max 2GB)
+        $maxSize = 2 * 1024 * 1024 * 1024; // 2GB in bytes
+        if ($totalSize > $maxSize) {
+            abort(413, 'File size too large. Maximum allowed size is 2GB.');
+        }
+
+        // Check file extension
+        $allowedExtensions = ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm', 'm4v', '3gp'];
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        
+        if (!in_array($extension, $allowedExtensions)) {
+            abort(422, 'File type not allowed. Allowed types: ' . implode(', ', $allowedExtensions));
+        }
+
+        // Check MIME type
+        $allowedMimeTypes = [
+            'video/mp4', 'video/avi', 'video/x-matroska', 'video/quicktime',
+            'video/x-ms-wmv', 'video/x-flv', 'video/webm', 'video/x-m4v',
+            'video/3gpp', 'video/3gpp2'
+        ];
+        
+        if (!in_array($file->getMimeType(), $allowedMimeTypes)) {
+            abort(422, 'File MIME type not allowed.');
+        }
+    }
+
+    /**
+     * Sanitize filename
+     */
+    private function sanitizeFilename($filename)
+    {
+        // Remove any directory traversal attempts
+        $filename = basename($filename);
+        
+        // Replace spaces and special characters
+        $filename = preg_replace('/[^a-zA-Z0-9._-]/', '_', $filename);
+        
+        // Ensure filename is not empty
+        if (empty($filename)) {
+            $filename = 'video_' . time() . '.mp4';
+        }
+        
+        return $filename;
     }
 
     /**
