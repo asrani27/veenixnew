@@ -26,7 +26,7 @@ class LoginController extends Controller
 
         // Verify Cloudflare Turnstile token
         $turnstileResponse = $req->input('cf-turnstile-response');
-        $secretKey = env('TURNSTILE_SECRET_KEY');
+        $secretKey = config('services.turnstile_secret_key');
 
         $response = Http::asForm()->post('https://challenges.cloudflare.com/turnstile/v0/siteverify', [
             'secret' => $secretKey,
@@ -38,12 +38,12 @@ class LoginController extends Controller
 
         if (!$turnstileResult['success']) {
             $errorMessage = 'Security verification failed. Please try again.';
-            
+
             // Provide more specific error message for debugging
             if (isset($turnstileResult['error-codes']) && !empty($turnstileResult['error-codes'])) {
                 $errorMessage .= ' Error codes: ' . implode(', ', $turnstileResult['error-codes']);
             }
-            
+
             return back()->withErrors([
                 'cf-turnstile-response' => $errorMessage,
             ])->onlyInput('username');
