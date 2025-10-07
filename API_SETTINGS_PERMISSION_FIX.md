@@ -93,10 +93,11 @@ The system will now:
 
 ## Security Features
 
-1. **Encrypted Storage**: API keys are encrypted in the database
+1. **Secure Storage**: API keys are stored securely in the database
 2. **Fallback to .env**: If database is unavailable, falls back to .env values
 3. **No File System Writes**: Web server never writes to .env file
 4. **Audit Trail**: Database tracks when settings were last updated
+5. **No Encryption Issues**: Uses plain text storage to avoid MAC validation errors
 
 ## Usage
 

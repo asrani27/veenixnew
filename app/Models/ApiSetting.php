@@ -16,7 +16,7 @@ class ApiSetting extends Model
     ];
 
     protected $casts = [
-        'value' => 'encrypted',
+        'value' => 'string',
     ];
 
     /**
