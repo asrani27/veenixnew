@@ -65,16 +65,36 @@ class ResumableUploadController extends Controller
         
         Storage::disk('local')->put($chunkPath, file_get_contents($chunk->getPathname()));
 
+        // Log chunk upload progress
+        Log::info('Chunk uploaded', [
+            'movie_id' => $movieId,
+            'chunk_number' => $chunkNumber,
+            'total_chunks' => $totalChunks,
+            'identifier' => $identifier
+        ]);
+
         // Check if all chunks have been uploaded
         $uploadedChunks = Storage::disk('local')->files($tempDir);
         
         if (count($uploadedChunks) == $totalChunks) {
+            Log::info('All chunks uploaded, starting merge', [
+                'movie_id' => $movieId,
+                'total_chunks' => $totalChunks,
+                'filename' => $filename
+            ]);
+
             // Merge chunks into final file
             $finalPath = $uploadDir . '/' . $this->sanitizeFilename($filename);
             $this->mergeChunks($tempDir, $finalPath, $totalChunks, $chunkSize);
             
             // Clean up temp directory
             Storage::disk('local')->deleteDirectory($tempDir);
+
+            Log::info('File merged successfully, starting HLS conversion', [
+                'movie_id' => $movieId,
+                'file_path' => $finalPath,
+                'file_size' => $totalSize
+            ]);
             
             // Get movie and trigger HLS conversion
             $movie = Movie::find($movieId);
