@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ApiSetting;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
 
 class ApiSettingsController extends Controller
 {
@@ -12,16 +12,19 @@ class ApiSettingsController extends Controller
      */
     public function index()
     {
-        return view('admin.api-settings', [
-            'tmdb_api_key' => config('services.tmdb.api_key'),
-            'was_access_key_id' => config('services.wasabi.access_key_id'),
-            'was_secret_access_key' => config('services.wasabi.secret_access_key'),
-            'was_default_region' => config('services.wasabi.default_region'),
-            'was_bucket' => config('services.wasabi.bucket'),
-            'was_url' => config('services.wasabi.url'),
-            'turnstile_site_key' => config('services.turnstile.site_key'),
-            'turnstile_secret_key' => config('services.turnstile.secret_key'),
-        ]);
+        // Get settings from database first, fallback to config
+        $settings = [
+            'tmdb_api_key' => ApiSetting::getValue('TMDB_API_KEY') ?? config('services.tmdb.api_key'),
+            'was_access_key_id' => ApiSetting::getValue('WAS_ACCESS_KEY_ID') ?? config('services.wasabi.access_key_id'),
+            'was_secret_access_key' => ApiSetting::getValue('WAS_SECRET_ACCESS_KEY') ?? config('services.wasabi.secret_access_key'),
+            'was_default_region' => ApiSetting::getValue('WAS_DEFAULT_REGION') ?? config('services.wasabi.default_region'),
+            'was_bucket' => ApiSetting::getValue('WAS_BUCKET') ?? config('services.wasabi.bucket'),
+            'was_url' => ApiSetting::getValue('WAS_URL') ?? config('services.wasabi.url'),
+            'turnstile_site_key' => ApiSetting::getValue('TURNSTILE_SITE_KEY') ?? config('services.turnstile.site_key'),
+            'turnstile_secret_key' => ApiSetting::getValue('TURNSTILE_SECRET_KEY') ?? config('services.turnstile.secret_key'),
+        ];
+
+        return view('admin.api-settings', $settings);
     }
 
     /**
@@ -40,42 +43,16 @@ class ApiSettingsController extends Controller
             'turnstile_secret_key' => 'required|string|min:10',
         ]);
 
-        $this->updateEnvFile([
-            'TMDB_API_KEY' => $request->tmdb_api_key,
-            'WAS_ACCESS_KEY_ID' => $request->was_access_key_id,
-            'WAS_SECRET_ACCESS_KEY' => $request->was_secret_access_key,
-            'WAS_DEFAULT_REGION' => $request->was_default_region,
-            'WAS_BUCKET' => $request->was_bucket,
-            'WAS_URL' => $request->was_url,
-            'TURNSTILE_SITE_KEY' => $request->turnstile_site_key,
-            'TURNSTILE_SECRET_KEY' => $request->turnstile_secret_key,
-        ]);
+        // Update settings in database
+        ApiSetting::setValue('TMDB_API_KEY', $request->tmdb_api_key, 'TMDB API Key');
+        ApiSetting::setValue('WAS_ACCESS_KEY_ID', $request->was_access_key_id, 'Wasabi Access Key ID');
+        ApiSetting::setValue('WAS_SECRET_ACCESS_KEY', $request->was_secret_access_key, 'Wasabi Secret Access Key');
+        ApiSetting::setValue('WAS_DEFAULT_REGION', $request->was_default_region, 'Wasabi Default Region');
+        ApiSetting::setValue('WAS_BUCKET', $request->was_bucket, 'Wasabi Bucket Name');
+        ApiSetting::setValue('WAS_URL', $request->was_url, 'Wasabi S3 URL');
+        ApiSetting::setValue('TURNSTILE_SITE_KEY', $request->turnstile_site_key, 'Cloudflare Turnstile Site Key');
+        ApiSetting::setValue('TURNSTILE_SECRET_KEY', $request->turnstile_secret_key, 'Cloudflare Turnstile Secret Key');
 
         return redirect()->route('admin.api-settings')->with('success', 'API keys updated successfully!');
-    }
-
-    /**
-     * Update the .env file with new values.
-     */
-    private function updateEnvFile(array $data)
-    {
-        $envPath = base_path('.env');
-        $envContent = File::get($envPath);
-
-        foreach ($data as $key => $value) {
-            // Escape any special characters in the value
-            $value = addslashes($value);
-            
-            // Check if the key exists in the file
-            if (preg_match("/^{$key}=/m", $envContent)) {
-                // Update existing key
-                $envContent = preg_replace("/^{$key}=.*/m", "{$key}={$value}", $envContent);
-            } else {
-                // Add new key if it doesn't exist
-                $envContent .= "\n{$key}={$value}";
-            }
-        }
-
-        File::put($envPath, $envContent);
     }
 }
