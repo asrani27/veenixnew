@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="test-csrf-token-12345">
+    <title>JavaScript Fix Test</title>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-4">JavaScript CSRF Token Test</h2>
+        
+        <button onclick="testCsrfToken()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            Test CSRF Token Access
+        </button>
+        
+        <div id="result" class="mt-4 p-4 rounded"></div>
+    </div>
+
+    <script>
+    function testCsrfToken() {
+        const result = document.getElementById('result');
+        
+        try {
+            // Test the original problematic code
+            const originalMethod = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            
+            // Test the fixed code
+            const fixedMethod = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || 'fallback-token';
+            
+            result.innerHTML = `
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+                    <p class="font-bold">Success!</p>
+                    <p>Original method: ${originalMethod}</p>
+                    <p>Fixed method: ${fixedMethod}</p>
+                    <p class="text-sm mt-2">Both methods work correctly when the meta tag exists.</p>
+                </div>
+            `;
+        } catch (error) {
+            result.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    <p class="font-bold">Error:</p>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+    }
+    
+    // Test what happens when meta tag doesn't exist
+    function testMissingMeta() {
+        const result = document.getElementById('result');
+        
+        // Simulate missing meta tag by using a non-existent selector
+        try {
+            const token = document.querySelector('meta[name="non-existent"]')?.getAttribute('content') || 'fallback-token';
+            
+            result.innerHTML = `
+                <div class="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+                    <p class="font-bold">Fallback Test:</p>
+                    <p>When meta tag is missing: ${token}</p>
+                    <p class="text-sm mt-2">The fixed code safely handles missing meta tags.</p>
+                </div>
+            `;
+        } catch (error) {
+            result.innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    <p class="font-bold">Unexpected Error:</p>
+                    <p>${error.message}</p>
+                </div>
+            `;
+        }
+    }
+    </script>
+    
+    <div class="max-w-md mx-auto mt-4 bg-white rounded-lg shadow-md p-6">
+        <button onclick="testMissingMeta()" class="bg-yellow-500 text-white px-4 py-2 rounded hover:bg-yellow-600">
+            Test Missing Meta Tag Handling
+        </button>
+    </div>
+</body>
+</html>
