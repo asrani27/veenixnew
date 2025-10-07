@@ -17,7 +17,7 @@ class TmdbService
 
     public function __construct()
     {
-        $this->apiKey = env('TMDB_API_KEY');
+        $this->apiKey = config('services.tmdb.api_key');
         $this->baseUrl = 'https://api.themoviedb.org/3';
         $this->imageUrl = 'https://image.tmdb.org/t/p';
         
