@@ -93,12 +93,12 @@
                 <div class="hidden sm:block w-px h-6 bg-gray-600"></div>
 
                 <!-- Download Button -->
-                {{-- <a href="/tv/download/{{ $tv->slug }}"
+                <a href="/tv/download/{{ $tv->slug }}"
                     class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-md text-sm font-medium transition-colors flex items-center gap-1.5"
                     title="Download TV Series">
                     <i class="fas fa-download text-xs"></i>
                     <span class="hidden sm:inline">Download</span>
-                </a> --}}
+                </a>
 
                 <!-- Report Broken Link Button -->
                 <button onclick="openReportModal()"

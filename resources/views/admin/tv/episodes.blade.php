@@ -101,6 +101,9 @@
                                 @if(!empty($episode->hls_playlist_path))
                                     <span class="text-green-600">🎬 HLS Available</span>
                                 @endif
+                                @if($episode->downloadLinks && $episode->downloadLinks->count() > 0)
+                                    <span class="text-purple-600">🔗 {{ $episode->downloadLinks->count() }} Download{{ $episode->downloadLinks->count() > 1 ? 's' : '' }}</span>
+                                @endif
                                 <span class="{{ $episode->publish ? 'text-green-600' : 'text-red-600' }}">
                                     {{ $episode->publish ? '✓ Published' : '✗ Unpublished' }}
                                 </span>

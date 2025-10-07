@@ -129,6 +129,23 @@
                     </div>
                 </div>
 
+                <!-- Download Links Section -->
+                <div class="mb-8">
+                    <h4 class="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Download Links</h4>
+                    <div id="downloadLinksContainer">
+                        <div class="space-y-4" id="downloadLinksList">
+                            <!-- Download links will be added here dynamically -->
+                        </div>
+                        <button type="button" id="addDownloadLinkBtn" 
+                            class="mt-4 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                            </svg>
+                            Add Download Link
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Form Actions -->
                 <div class="mt-8 flex justify-between items-center border-t pt-6">
                     <a href="{{ route('admin.tv.episodes-page', ['tv' => $tv->id, 'season' => $season->season_number]) }}"
@@ -231,6 +248,85 @@ document.addEventListener('DOMContentLoaded', function() {
             importEpisodeBtn.click();
         }
     });
+
+    // Download Links Management
+    let downloadLinkIndex = 0;
+    const downloadLinksList = document.getElementById('downloadLinksList');
+    const addDownloadLinkBtn = document.getElementById('addDownloadLinkBtn');
+
+    function addDownloadLink(linkData = null) {
+        const index = downloadLinkIndex++;
+        const linkHtml = `
+            <div class="download-link-item bg-gray-50 p-4 rounded-lg border border-gray-200" data-index="${index}">
+                <div class="flex justify-between items-start mb-3">
+                    <h5 class="text-sm font-medium text-gray-700">Download Link #${index + 1}</h5>
+                    <button type="button" onclick="removeDownloadLink(${index})" 
+                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">URL</label>
+                        <input type="url" name="download_links[${index}][url]" 
+                            value="${linkData ? linkData.url : ''}"
+                            placeholder="https://example.com/video.mp4"
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Quality</label>
+                        <select name="download_links[${index}][quality]" 
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                            <option value="540p" ${linkData && linkData.quality === '540p' ? 'selected' : ''}>540p</option>
+                            <option value="720p" ${linkData && linkData.quality === '720p' ? 'selected' : ''}>720p</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Label (Optional)</label>
+                        <input type="text" name="download_links[${index}][label]" 
+                            value="${linkData ? linkData.label : ''}"
+                            placeholder="e.g., Direct Download"
+                            class="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                </div>
+                <div class="mt-3 flex items-center gap-4">
+                    <label class="flex items-center">
+                        <input type="hidden" name="download_links[${index}][is_active]" value="0">
+                        <input type="checkbox" name="download_links[${index}][is_active]" 
+                            ${linkData ? (linkData.is_active ? 'checked' : '') : 'checked'}
+                            value="1"
+                            class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                        <span class="ml-2 text-xs text-gray-700">Active</span>
+                    </label>
+                    <div>
+                        <label class="block text-xs font-medium text-gray-700 mb-1">Sort Order</label>
+                        <input type="number" name="download_links[${index}][sort_order]" 
+                            value="${linkData ? linkData.sort_order : index}"
+                            min="0"
+                            class="w-16 px-2 py-1 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        downloadLinksList.insertAdjacentHTML('beforeend', linkHtml);
+    }
+
+    function removeDownloadLink(index) {
+        const element = document.querySelector(`.download-link-item[data-index="${index}"]`);
+        if (element) {
+            element.remove();
+        }
+    }
+
+    addDownloadLinkBtn.addEventListener('click', function() {
+        addDownloadLink();
+    });
+
+    // Add one empty download link by default
+    addDownloadLink();
 });
 </script>
 @endsection

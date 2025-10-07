@@ -317,10 +317,16 @@ class MovieController extends Controller
             'countries.*' => 'exists:countries,id',
             'actors' => 'nullable|array',
             'actors.*' => 'exists:actors,id',
+            'download_links' => 'nullable|array',
+            'download_links.*.url' => 'nullable|string',
+            'download_links.*.quality' => 'nullable|in:540p,720p',
+            'download_links.*.label' => 'nullable|string',
+            'download_links.*.is_active' => 'nullable|boolean',
+            'download_links.*.sort_order' => 'nullable|integer|min:0',
         ]);
 
         // Update movie basic data
-        $movie->update($request->except(['genres', 'countries', 'actors']));
+        $movie->update($request->except(['genres', 'countries', 'actors', 'download_links']));
 
         // Update genres relationship
         if ($request->has('genres')) {
@@ -337,7 +343,59 @@ class MovieController extends Controller
             $movie->actors()->sync($request->actors);
         }
 
+        // Update download links
+        $this->updateDownloadLinks($movie, $request->download_links ?? []);
+
         return redirect()->route('admin.movies.index')->with('success', 'Movie updated successfully.');
+    }
+
+    /**
+     * Update download links for a movie
+     */
+    private function updateDownloadLinks($movie, $downloadLinksData)
+    {
+        // Get existing download links
+        $existingLinks = $movie->downloadLinks->keyBy('id');
+        $updatedLinkIds = [];
+
+        if (empty($downloadLinksData)) {
+            // If no download links data provided, delete all existing links
+            $movie->downloadLinks()->delete();
+            return;
+        }
+
+        foreach ($downloadLinksData as $key => $linkData) {
+            // Check if this is a new link (key starts with "new_") or existing link
+            if (str_starts_with($key, 'new_')) {
+                // This is a new link, create it
+                $newLink = $movie->downloadLinks()->create([
+                    'url' => $linkData['url'] ?? '',
+                    'quality' => $linkData['quality'] ?? '540p',
+                    'label' => $linkData['label'] ?? null,
+                    'is_active' => isset($linkData['is_active']) ? (bool)$linkData['is_active'] : true,
+                    'sort_order' => $linkData['sort_order'] ?? 0,
+                ]);
+                $updatedLinkIds[] = $newLink->id; // Add new link to updated list to prevent deletion
+            } else {
+                // This is an existing link
+                if (isset($linkData['id']) && isset($existingLinks[$linkData['id']])) {
+                    $link = $existingLinks[$linkData['id']];
+                    $link->update([
+                        'url' => $linkData['url'] ?? $link->url,
+                        'quality' => $linkData['quality'] ?? $link->quality,
+                        'label' => $linkData['label'] ?? $link->label,
+                        'is_active' => isset($linkData['is_active']) ? (bool)$linkData['is_active'] : $link->is_active,
+                        'sort_order' => $linkData['sort_order'] ?? $link->sort_order,
+                    ]);
+                    $updatedLinkIds[] = $link->id;
+                }
+            }
+        }
+
+        // Delete links that weren't updated (removed from form)
+        $movie->downloadLinks()
+            ->whereNotIn('id', $updatedLinkIds)
+            ->delete();
     }
 
     /**
@@ -394,7 +452,6 @@ class MovieController extends Controller
                 'movie_id' => $movie->id,
                 'movie_slug' => $movie->slug
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to delete video files from Wasabi', [
                 'movie_id' => $movie->id,
@@ -407,7 +464,7 @@ class MovieController extends Controller
     }
 
     /**
-     * Delete a specific video file from Wasabi storage
+     * Delete video file from Wasabi storage
      */
     private function deleteVideoFromWasabi($filePath)
     {
@@ -423,7 +480,6 @@ class MovieController extends Controller
             } else {
                 Log::warning('Video file not found in Wasabi', ['file_path' => $filePath]);
             }
-
         } catch (\Exception $e) {
             Log::error('Failed to delete video file from Wasabi', [
                 'file_path' => $filePath,
@@ -475,7 +531,6 @@ class MovieController extends Controller
                 'movie_slug' => $movieSlug,
                 'files_deleted' => $deletedCount
             ]);
-
         } catch (\Exception $e) {
             Log::error('Failed to delete HLS files from Wasabi', [
                 'movie_slug' => $movieSlug,
@@ -483,20 +538,6 @@ class MovieController extends Controller
             ]);
             throw $e;
         }
-    }
-
-    /**
-     * Scope a query to only include featured movies.
-     *
-     * @param  \Illuminate\Database\Eloquent\Builder  $query
-     * @return \Illuminate\Database\Eloquent\Builder
-     */
-    public function scopeFeatured($query)
-    {
-        return $query->whereNotNull('poster_path')
-            ->where('title', '!=', '')
-            ->orderBy('created_at', 'desc')
-            ->take(8); // Limit to 6 for the homepage
     }
 
     /**
@@ -561,7 +602,7 @@ class MovieController extends Controller
     public function getHlsStatus($id)
     {
         $movie = Movie::findOrFail($id);
-        
+
         return response()->json([
             'status' => $movie->hls_status,
             'progress' => $movie->hls_progress ?? 0,
@@ -580,7 +621,7 @@ class MovieController extends Controller
     {
         $status = $movie->hls_status;
         $progress = $movie->hls_progress ?? 0;
-        
+
         // Provide more detailed messages based on progress
         if ($status === 'processing') {
             if ($progress < 20) {
@@ -595,8 +636,8 @@ class MovieController extends Controller
                 return 'Finalizing conversion...';
             }
         }
-        
-        return match($status) {
+
+        return match ($status) {
             'pending' => 'Waiting to start conversion...',
             'processing' => 'Converting to HLS format...',
             'completed' => 'Conversion completed successfully!',
@@ -674,7 +715,7 @@ class MovieController extends Controller
             // Extract the directory path from the file path
             // Example: "movie-slug/playlist.m3u8" -> "movie-slug/"
             $directoryPath = dirname($filePath);
-            
+
             // If the file path doesn't contain a directory, use the file path as directory
             if ($directoryPath === '.' || $directoryPath === '') {
                 $directoryPath = $filePath;
@@ -695,7 +736,6 @@ class MovieController extends Controller
                 // Some storage systems don't support directory deletion
                 // or the directory might not be empty, which is fine
             }
-
         } catch (\Exception $e) {
             // Log the error but don't throw it to prevent upload failure
             // You might want to log this error in a real application
@@ -710,7 +750,7 @@ class MovieController extends Controller
     {
         try {
             $movie = Movie::findOrFail($movieId);
-            
+
             // Check if movie has a video file
             if (!$movie->file) {
                 return response()->json([
@@ -718,22 +758,22 @@ class MovieController extends Controller
                     'message' => 'No video file found for this movie'
                 ], 400);
             }
-            
+
             // Reset HLS status
             $movie->update([
                 'hls_status' => 'pending',
                 'hls_progress' => 0,
                 'hls_error_message' => null
             ]);
-            
+
             // Dispatch the conversion job
             ConvertVideoToHlsJob::dispatch($movie->id, $movie->file, $movie->slug);
-            
+
             Log::info('HLS conversion retry dispatched', [
                 'movie_id' => $movieId,
                 'movie_slug' => $movie->slug
             ]);
-            
+
             return response()->json([
                 'success' => true,
                 'message' => 'HLS conversion retry started successfully'
@@ -743,7 +783,7 @@ class MovieController extends Controller
                 'movie_id' => $movieId,
                 'error' => $e->getMessage()
             ]);
-            
+
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retry HLS conversion: ' . $e->getMessage()
@@ -774,5 +814,20 @@ class MovieController extends Controller
             ->get();
 
         return view('movie', compact('movie', 'relatedMovies'));
+    }
+
+    /**
+     * Show download page for the specified movie.
+     */
+    public function download($slug)
+    {
+        $movie = Movie::where('slug', $slug)
+            ->with(['genres', 'countries', 'actors', 'downloadLinks' => function ($query) {
+                $query->where('is_active', true)->ordered();
+            }])
+            ->firstOrFail();
+
+
+        return view('movie-download', compact('movie'));
     }
 }

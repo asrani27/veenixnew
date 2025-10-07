@@ -58,4 +58,19 @@ class Episode extends Model
     {
         return $this->belongsTo(Season::class);
     }
+    
+    public function downloadLinks()
+    {
+        return $this->hasMany(EpisodeDownloadLink::class)->ordered();
+    }
+    
+    public function activeDownloadLinks()
+    {
+        return $this->downloadLinks()->active();
+    }
+    
+    public function downloadLinksByQuality($quality)
+    {
+        return $this->downloadLinks()->byQuality($quality)->active();
+    }
 }

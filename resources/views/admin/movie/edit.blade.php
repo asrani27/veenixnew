@@ -375,6 +375,79 @@
                     </div>
                 </div>
 
+                <!-- Download Links Section -->
+                <div class="mb-8">
+                    <h4 class="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Download Links</h4>
+                    <div class="space-y-4">
+                        <!-- Existing Download Links -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Existing Download Links</label>
+                            @if($movie->downloadLinks && $movie->downloadLinks->count() > 0)
+                            <div class="space-y-2" id="existing-download-links">
+                                @foreach($movie->downloadLinks as $index => $link)
+                                <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg download-link-item">
+                                    <div class="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
+                                        <input type="text" 
+                                               name="download_links[{{ $index }}][url]" 
+                                               value="{{ $link->url }}" 
+                                               placeholder="Download URL"
+                                               class="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <select name="download_links[{{ $index }}][quality]" 
+                                                class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="540p" {{ $link->quality == '540p' ? 'selected' : '' }}>540p</option>
+                                            <option value="720p" {{ $link->quality == '720p' ? 'selected' : '' }}>720p</option>
+                                        </select>
+                                        <input type="text" 
+                                               name="download_links[{{ $index }}][label]" 
+                                               value="{{ $link->label }}" 
+                                               placeholder="Label (optional)"
+                                               class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <input type="number" 
+                                               name="download_links[{{ $index }}][sort_order]" 
+                                               value="{{ $link->sort_order }}" 
+                                               placeholder="Order"
+                                               min="0"
+                                               class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label class="flex items-center">
+                                            <input type="checkbox" 
+                                                   name="download_links[{{ $index }}][is_active]" 
+                                                   value="1" 
+                                                   {{ $link->is_active ? 'checked' : '' }}
+                                                   class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                            <span class="ml-1 text-sm text-gray-700">Active</span>
+                                        </label>
+                                        <button type="button" 
+                                                onclick="removeDownloadLink(this)" 
+                                                class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                            Remove
+                                        </button>
+                                    </div>
+                                    <input type="hidden" name="download_links[{{ $index }}][id]" value="{{ $link->id }}">
+                                </div>
+                                @endforeach
+                            </div>
+                            @else
+                            <p class="text-gray-500 text-sm">No download links added yet.</p>
+                            @endif
+                        </div>
+
+                        <!-- Add New Download Links -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Add New Download Links</label>
+                            <div id="new-download-links" class="space-y-2">
+                                <!-- New links will be added here -->
+                            </div>
+                            <button type="button" 
+                                    onclick="addNewDownloadLink()" 
+                                    class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200">
+                                <i class="fas fa-plus mr-2"></i>Add Download Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Form Actions -->
                 <div class="mt-8 flex justify-between items-center border-t pt-6">
                     <a href="{{ route('admin.movies.index') }}"
@@ -404,6 +477,64 @@
 @push('scripts')
 <script src="{{ asset('js/resumable.js') }}"></script>
 <script>
+    // Global functions for download links management
+    let newDownloadLinkIndex = {{ $movie->downloadLinks ? $movie->downloadLinks->count() : 0 }};
+
+    function addNewDownloadLink() {
+        const container = document.getElementById('new-download-links');
+        const linkDiv = document.createElement('div');
+        linkDiv.className = 'flex items-center gap-2 p-3 bg-gray-50 rounded-lg download-link-item';
+        
+        linkDiv.innerHTML = `
+            <div class="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
+                <input type="text" 
+                       name="download_links[new_${newDownloadLinkIndex}][url]" 
+                       placeholder="Download URL"
+                       class="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                <select name="download_links[new_${newDownloadLinkIndex}][quality]" 
+                        class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="540p">540p</option>
+                    <option value="720p">720p</option>
+                </select>
+                <input type="text" 
+                       name="download_links[new_${newDownloadLinkIndex}][label]" 
+                       placeholder="Label (optional)"
+                       class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                <input type="number" 
+                       name="download_links[new_${newDownloadLinkIndex}][sort_order]" 
+                       value="${newDownloadLinkIndex}"
+                       placeholder="Order"
+                       min="0"
+                       class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+            </div>
+            <div class="flex items-center gap-2">
+                <label class="flex items-center">
+                    <input type="checkbox" 
+                           name="download_links[new_${newDownloadLinkIndex}][is_active]" 
+                           value="1" 
+                           checked
+                           class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                    <span class="ml-1 text-sm text-gray-700">Active</span>
+                </label>
+                <button type="button" 
+                        onclick="removeDownloadLink(this)" 
+                        class="text-red-600 hover:text-red-800 text-sm font-medium">
+                    Remove
+                </button>
+            </div>
+        `;
+        
+        container.appendChild(linkDiv);
+        newDownloadLinkIndex++;
+    }
+
+    function removeDownloadLink(button) {
+        const linkItem = button.closest('.download-link-item');
+        if (linkItem) {
+            linkItem.remove();
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize SlimSelect
         if (typeof SlimSelect !== 'undefined') {

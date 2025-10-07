@@ -129,11 +129,13 @@ Route::post('login', [LoginController::class, 'login']);
 Route::get('logout', [LogoutController::class, 'logout'])->name('logout');
 Route::get('/movie/{slug}', [MovieController::class, 'show'])->name('movie.show');
 Route::get('/movie/stream/{tmdb_id}', [StreamController::class, 'movieStream'])->name('movie.stream');
+Route::get('/movie/download/{slug}', [MovieController::class, 'download'])->name('movie.download');
 Route::get('/tv/{slug}', [TvController::class, 'show'])->name('tv.show');
 Route::get('/tv/stream/{slug}/season/{season_number}/episode/{episode_number}', [StreamController::class, 'episodeStream'])->name('tv.episode.stream');
 Route::get('/tv/stream/{slug}', [StreamController::class, 'tvStreamBySlug'])->name('tv.stream.slug');
 Route::get('/tv/stream/{tmdb_id}', [StreamController::class, 'tvStream'])->name('tv.stream');
 Route::get('/tv/{slug}/season/{season_number}/episode/{episode_number}', [TvController::class, 'showEpisode'])->name('tv.episode.show');
+Route::get('/tv/download/{slug}', [TvController::class, 'download'])->name('tv.download');
 
 // HLS Proxy Routes
 Route::get('/hls-proxy/{path}', [StreamController::class, 'hlsProxy'])->where('path', '.*');

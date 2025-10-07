@@ -46,6 +46,14 @@ class Movie extends Model
     }
 
     /**
+     * Get the download links for the movie.
+     */
+    public function downloadLinks()
+    {
+        return $this->hasMany(MovieDownloadLink::class)->ordered();
+    }
+
+    /**
      * Get the poster URL attribute
      */
     public function getPosterUrlAttribute()

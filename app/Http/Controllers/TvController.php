@@ -753,7 +753,13 @@ class TvController extends Controller
                 'runtime' => 'nullable|integer|min:0',
                 'vote_average' => 'nullable|numeric|min:0|max:10',
                 'vote_count' => 'nullable|integer|min:0',
-                'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'download_links' => 'nullable|array',
+                'download_links.*.url' => 'required_with:download_links.*|url',
+                'download_links.*.quality' => 'required_with:download_links.*|in:540p,720p',
+                'download_links.*.label' => 'nullable|string|max:255',
+                'download_links.*.is_active' => 'nullable|boolean',
+                'download_links.*.sort_order' => 'nullable|integer|min:0'
             ]);
 
             $tv = Tv::findOrFail($tvId);
@@ -783,6 +789,24 @@ class TvController extends Controller
 
             $episode->save();
 
+            // Handle download links - delete existing and create new ones
+            $episode->downloadLinks()->delete();
+            
+            if ($request->has('download_links')) {
+                foreach ($request->download_links as $linkData) {
+                    if (!empty($linkData['url'])) {
+                        \App\Models\EpisodeDownloadLink::create([
+                            'episode_id' => $episode->id,
+                            'url' => $linkData['url'],
+                            'quality' => $linkData['quality'],
+                            'label' => $linkData['label'] ?? null,
+                            'is_active' => isset($linkData['is_active']) ? (bool)$linkData['is_active'] : true,
+                            'sort_order' => $linkData['sort_order'] ?? 0
+                        ]);
+                    }
+                }
+            }
+
             return redirect()->route('admin.tv.season.episodes', ['tv' => $tvId, 'season' => $seasonNumber])->with('success', 'Episode updated successfully.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Failed to update episode: ' . $e->getMessage())->withInput();
@@ -799,7 +823,8 @@ class TvController extends Controller
             $season = \App\Models\Season::where('tv_id', $tvId)
                 ->where('season_number', $seasonNumber)
                 ->firstOrFail();
-            $episodes = \App\Models\Episode::where('tv_id', $tvId)
+            $episodes = \App\Models\Episode::with(['downloadLinks'])
+                ->where('tv_id', $tvId)
                 ->where('season_number', $seasonNumber)
                 ->orderBy('episode_number')
                 ->get();
@@ -914,7 +939,13 @@ class TvController extends Controller
                 'runtime' => 'nullable|integer|min:0',
                 'vote_average' => 'nullable|numeric|min:0|max:10',
                 'vote_count' => 'nullable|integer|min:0',
-                'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
+                'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'download_links' => 'nullable|array',
+                'download_links.*.url' => 'required_with:download_links.*|url',
+                'download_links.*.quality' => 'required_with:download_links.*|in:540p,720p',
+                'download_links.*.label' => 'nullable|string|max:255',
+                'download_links.*.is_active' => 'nullable|boolean',
+                'download_links.*.sort_order' => 'nullable|integer|min:0'
             ]);
 
             $tv = Tv::findOrFail($tvId);
@@ -950,6 +981,22 @@ class TvController extends Controller
                 $stillPath = $request->file('still')->store('episodes/stills', 'public');
                 $episode->local_still_path = $stillPath;
                 $episode->save();
+            }
+
+            // Handle download links
+            if ($request->has('download_links')) {
+                foreach ($request->download_links as $linkData) {
+                    if (!empty($linkData['url'])) {
+                        \App\Models\EpisodeDownloadLink::create([
+                            'episode_id' => $episode->id,
+                            'url' => $linkData['url'],
+                            'quality' => $linkData['quality'],
+                            'label' => $linkData['label'] ?? null,
+                            'is_active' => isset($linkData['is_active']) ? (bool)$linkData['is_active'] : true,
+                            'sort_order' => $linkData['sort_order'] ?? 0
+                        ]);
+                    }
+                }
             }
 
             return redirect()->route('admin.tv.episodes-page', ['tv' => $tvId, 'season' => $seasonNumber])->with('success', 'Episode created successfully.');
@@ -1086,6 +1133,23 @@ class TvController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('admin.tv.episodes-page', ['tv' => $tvId, 'season' => $seasonNumber])
                 ->with('error', 'Failed to toggle publish status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download TV series
+     */
+    public function download($slug)
+    {
+        try {
+            $tv = Tv::with(['seasons.episodes' => function($query) {
+                $query->where('publish', true);
+            }])->where('slug', $slug)->firstOrFail();
+
+            // Create a downloadable content page with episode download links
+            return view('tv-download', compact('tv'));
+        } catch (\Exception $e) {
+            abort(404);
         }
     }
 }
