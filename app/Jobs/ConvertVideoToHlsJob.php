@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Models\Movie;
+use App\Models\ApiSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -89,12 +90,55 @@ class ConvertVideoToHlsJob implements ShouldQueue
     }
 
     /**
+     * Configure Wasabi storage dynamically using credentials from api_settings table
+     */
+    private function configureWasabiStorage(): void
+    {
+        try {
+            // Get Wasabi credentials from api_settings table
+            $accessKey = ApiSetting::getValue('wasabi_access_key_id');
+            $secretKey = ApiSetting::getValue('wasabi_secret_access_key');
+            $region = ApiSetting::getValue('wasabi_region', 'ap-southeast-1');
+            $bucket = ApiSetting::getValue('wasabi_bucket');
+
+            if (!$accessKey || !$secretKey || !$bucket) {
+                throw new \Exception("Wasabi credentials not found in api_settings table. Missing: " .
+                    (!$accessKey ? 'access_key, ' : '') .
+                    (!$secretKey ? 'secret_key, ' : '') .
+                    (!$bucket ? 'bucket' : ''));
+            }
+
+            Log::info("🔑 Using Wasabi credentials from database for bucket: {$bucket}");
+
+            // Configure storage dynamically
+            config([
+                'filesystems.disks.wasabi_dynamic' => [
+                    'driver' => 's3',
+                    'key' => $accessKey,
+                    'secret' => $secretKey,
+                    'region' => $region,
+                    'bucket' => $bucket,
+                    'endpoint' => 'https://s3.' . $region . '.wasabisys.com',
+                    'use_path_style_endpoint' => false,
+                    'throw' => true,
+                ]
+            ]);
+        } catch (\Throwable $e) {
+            Log::error("🚨 Failed to configure Wasabi storage: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
      * Upload hasil konversi HLS ke Wasabi storage
      */
     private function uploadToWasabi(string $localDir, string $m3u8Path): void
     {
         try {
             Log::info("🚀 Memulai upload ke Wasabi storage...");
+
+            // Configure Wasabi storage with database credentials
+            $this->configureWasabiStorage();
 
             // Dapatkan semua file HLS dalam direktori
             $files = glob($localDir . '/*');
@@ -104,6 +148,10 @@ class ConvertVideoToHlsJob implements ShouldQueue
                 Log::warning("⚠️ Tidak ada file yang ditemukan di: {$localDir}");
                 return;
             }
+
+            // Get bucket name from api_settings for URL construction
+            $bucket = ApiSetting::getValue('wasabi_bucket');
+            $region = ApiSetting::getValue('wasabi_region', 'ap-southeast-1');
 
             // Tentukan path di Wasabi berdasarkan movie slug
             $wasabiPath = '';
@@ -116,12 +164,12 @@ class ConvertVideoToHlsJob implements ShouldQueue
 
             Log::info("📂 Upload path di Wasabi: {$wasabiPath}");
 
-            // Upload setiap file ke Wasabi
+            // Upload setiap file ke Wasabi menggunakan dynamic disk
             foreach ($files as $file) {
                 $filename = basename($file);
                 $remotePath = $wasabiPath . '/' . $filename;
 
-                // Upload file ke Wasabi
+                // Upload file ke Wasabi menggunakan disk yang dikonfigurasi secara dinamis
                 $uploaded = Storage::disk('wasabi')->put($remotePath, file_get_contents($file));
 
                 if ($uploaded) {
@@ -136,8 +184,8 @@ class ConvertVideoToHlsJob implements ShouldQueue
             if ($this->movieId && !empty($uploadedFiles)) {
                 $movie = Movie::find($this->movieId);
                 if ($movie) {
-                    // Buat URL untuk master playlist
-                    $playlistUrl = 'https://' . env('WAS_BUCKET') . '.s3.ap-southeast-1.wasabisys.com/' . $wasabiPath . '/index.m3u8';
+                    // Buat URL untuk master playlist menggunakan bucket dari database
+                    $playlistUrl = 'https://' . $bucket . '.s3.' . $region . '.wasabisys.com' . $wasabiPath . '/index.m3u8';
 
                     // Update movie dengan HLS data
                     $movie->update([
@@ -208,14 +256,14 @@ class ConvertVideoToHlsJob implements ShouldQueue
     {
         try {
             Log::info("🔍 Mulai cleanup file original, inputPath: {$this->inputPath}");
-            
+
             $originalFilePath = storage_path("app/{$this->inputPath}");
             Log::info("🔍 Path lengkap file original: {$originalFilePath}");
-            
+
             if (file_exists($originalFilePath)) {
                 $fileSize = filesize($originalFilePath);
                 Log::info("📁 File ditemukan, ukuran: " . number_format($fileSize / 1024 / 1024, 2) . " MB");
-                
+
                 if (unlink($originalFilePath)) {
                     Log::info("🗑️ File original dari uploads dihapus: " . basename($originalFilePath));
                 } else {
@@ -223,11 +271,11 @@ class ConvertVideoToHlsJob implements ShouldQueue
                 }
             } else {
                 Log::warning("⚠️ File original tidak ditemukan: {$originalFilePath}");
-                
+
                 // Cek jika file ada di uploads langsung
                 $alternativePath = storage_path("app/uploads/" . basename($this->inputPath));
                 Log::info("🔍 Cek path alternatif: {$alternativePath}");
-                
+
                 if (file_exists($alternativePath)) {
                     if (unlink($alternativePath)) {
                         Log::info("🗑️ File original dari uploads (alternatif) dihapus: " . basename($alternativePath));
