@@ -18,6 +18,14 @@ class TusUploadController extends Controller
 
         $server->setApiPath('/api/upload');
         $server->setUploadDir(storage_path('app/uploads'));
+
+        $cacheDir = storage_path('app/tus-cache');
+        if (!file_exists($cacheDir)) {
+            mkdir($cacheDir, 0777, true);
+        }
+
+        $server->setCacheDir($cacheDir);
+
         // ✅ Tambahkan event listener untuk upload complete
         $server->event()->addListener('tus-server.upload.complete', function ($event) {
             $file = $event->getFile();
