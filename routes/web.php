@@ -13,6 +13,7 @@ use App\Http\Controllers\YearController;
 use App\Http\Controllers\MoviesController;
 use App\Http\Controllers\TvShowsController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\TusUploadController;
 use App\Livewire\Settings\Appearance;
 use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
@@ -50,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('admin/movie/{movie}/edit', [MovieController::class, 'edit'])->name('admin.movies.edit');
     Route::put('admin/movie/{movie}', [MovieController::class, 'update'])->name('admin.movies.update');
     Route::delete('admin/movie/{movie}', [MovieController::class, 'destroy'])->name('admin.movies.destroy');
+    Route::get('admin/movie/{movie}/upload', [MovieController::class, 'upload'])->name('admin.movies.upload');
     Route::post('admin/movie/{movie}/upload-video', [MovieController::class, 'uploadVideo'])->name('admin.movies.upload-video');
     Route::get('admin/movies/{movie}/hls-status', [MovieController::class, 'getHlsStatus'])->name('admin.movies.hls-status');
     Route::post('admin/movies/{movie}/retry-hls-conversion', [MovieController::class, 'retryHlsConversion'])->name('admin.movies.retry-hls-conversion');
@@ -122,6 +124,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('admin/reports/{report}', [ReportController::class, 'show'])->name('admin.reports.show');
     Route::put('admin/reports/{report}', [ReportController::class, 'update'])->name('admin.reports.update');
     Route::delete('admin/reports/{report}', [ReportController::class, 'destroy'])->name('admin.reports.destroy');
+
+  
 });
 
 Route::get('login', [LoginController::class, 'index'])->name('login');

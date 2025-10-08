@@ -179,30 +179,138 @@ class ResumableUploadController extends Controller
      */
     private function mergeChunks($tempDir, $finalPath, $totalChunks, $chunkSize)
     {
-        $finalFilePath = Storage::disk('local')->path($finalPath);
-        $finalDir = dirname($finalFilePath);
-        
-        if (!is_dir($finalDir)) {
-            mkdir($finalDir, 0755, true);
-        }
+        try {
+            Log::info('Starting chunk merge process', [
+                'temp_dir' => $tempDir,
+                'final_path' => $finalPath,
+                'total_chunks' => $totalChunks,
+                'chunk_size' => $chunkSize
+            ]);
 
-        $finalFile = fopen($finalFilePath, 'wb');
-        
-        for ($i = 1; $i <= $totalChunks; $i++) {
-            $chunkPath = $tempDir . '/chunk_' . str_pad($i, 6, '0', STR_PAD_LEFT) . '.part';
-            $chunkFilePath = Storage::disk('local')->path($chunkPath);
+            $finalFilePath = Storage::disk('local')->path($finalPath);
+            $finalDir = dirname($finalFilePath);
             
-            if (file_exists($chunkFilePath)) {
-                $chunkData = file_get_contents($chunkFilePath);
-                fwrite($finalFile, $chunkData);
-            } else {
-                fclose($finalFile);
-                unlink($finalFilePath);
-                abort(500, 'Missing chunk ' . $i . '. Upload failed.');
+            // Ensure directory exists with proper permissions
+            if (!is_dir($finalDir)) {
+                if (!mkdir($finalDir, 0755, true)) {
+                    Log::error('Failed to create directory', ['directory' => $finalDir]);
+                    abort(500, 'Failed to create upload directory.');
+                }
+                Log::info('Created directory', ['directory' => $finalDir]);
             }
+
+            // Check if directory is writable
+            if (!is_writable($finalDir)) {
+                Log::error('Directory is not writable', ['directory' => $finalDir]);
+                abort(500, 'Upload directory is not writable.');
+            }
+
+            // Check available disk space (at least 2x the expected file size)
+            $expectedSize = $totalChunks * $chunkSize;
+            $freeSpace = disk_free_space($finalDir);
+            if ($freeSpace < ($expectedSize * 2)) {
+                Log::error('Insufficient disk space', [
+                    'required' => $expectedSize * 2,
+                    'available' => $freeSpace,
+                    'directory' => $finalDir
+                ]);
+                abort(500, 'Insufficient disk space for file merge.');
+            }
+
+            Log::info('Opening final file for writing', ['file_path' => $finalFilePath]);
+            $finalFile = fopen($finalFilePath, 'wb');
+            
+            if (!$finalFile) {
+                Log::error('Failed to open final file', ['file_path' => $finalFilePath]);
+                abort(500, 'Failed to create final file.');
+            }
+
+            $totalBytesWritten = 0;
+            
+            for ($i = 1; $i <= $totalChunks; $i++) {
+                $chunkPath = $tempDir . '/chunk_' . str_pad($i, 6, '0', STR_PAD_LEFT) . '.part';
+                $chunkFilePath = Storage::disk('local')->path($chunkPath);
+                
+                Log::info('Processing chunk', [
+                    'chunk_number' => $i,
+                    'chunk_path' => $chunkPath,
+                    'chunk_file_path' => $chunkFilePath
+                ]);
+                
+                if (file_exists($chunkFilePath)) {
+                    $chunkData = file_get_contents($chunkFilePath);
+                    if ($chunkData === false) {
+                        Log::error('Failed to read chunk data', ['chunk_file_path' => $chunkFilePath]);
+                        fclose($finalFile);
+                        unlink($finalFilePath);
+                        abort(500, 'Failed to read chunk ' . $i . '.');
+                    }
+                    
+                    $bytesWritten = fwrite($finalFile, $chunkData);
+                    if ($bytesWritten === false) {
+                        Log::error('Failed to write chunk to final file', [
+                            'chunk_number' => $i,
+                            'chunk_size' => strlen($chunkData)
+                        ]);
+                        fclose($finalFile);
+                        unlink($finalFilePath);
+                        abort(500, 'Failed to write chunk ' . $i . ' to final file.');
+                    }
+                    
+                    $totalBytesWritten += $bytesWritten;
+                    Log::info('Chunk written successfully', [
+                        'chunk_number' => $i,
+                        'bytes_written' => $bytesWritten,
+                        'total_bytes' => $totalBytesWritten
+                    ]);
+                } else {
+                    Log::error('Missing chunk file', [
+                        'chunk_number' => $i,
+                        'chunk_file_path' => $chunkFilePath,
+                        'existing_chunks' => Storage::disk('local')->files($tempDir)
+                    ]);
+                    fclose($finalFile);
+                    if (file_exists($finalFilePath)) {
+                        unlink($finalFilePath);
+                    }
+                    abort(500, 'Missing chunk ' . $i . '. Upload failed.');
+                }
+            }
+            
+            fclose($finalFile);
+            
+            // Verify the merged file
+            if (!file_exists($finalFilePath)) {
+                Log::error('Final file was not created', ['file_path' => $finalFilePath]);
+                abort(500, 'Failed to create merged file.');
+            }
+            
+            $actualSize = filesize($finalFilePath);
+            Log::info('File merge completed successfully', [
+                'file_path' => $finalFilePath,
+                'expected_size' => $expectedSize,
+                'actual_size' => $actualSize,
+                'total_bytes_written' => $totalBytesWritten
+            ]);
+            
+            // Set proper file permissions
+            chmod($finalFilePath, 0644);
+            
+        } catch (\Exception $e) {
+            Log::error('Merge process failed with exception', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'temp_dir' => $tempDir,
+                'final_path' => $finalPath
+            ]);
+            
+            // Clean up partial file if it exists
+            if (isset($finalFilePath) && file_exists($finalFilePath)) {
+                unlink($finalFilePath);
+            }
+            
+            abort(500, 'File merge failed: ' . $e->getMessage());
         }
-        
-        fclose($finalFile);
     }
 
     /**

@@ -174,27 +174,115 @@ class EpisodeController extends Controller
                     mkdir($videosDir, 0755, true);
                 }
 
-                // Merge chunks in correct order
+                // Merge chunks in correct order with enhanced error handling
+                Log::info('Starting episode chunk merge process', [
+                    'episode_id' => $episode->id,
+                    'temp_dir' => $tempDir,
+                    'final_path' => $finalPath,
+                    'total_chunks' => $totalChunks,
+                    'chunk_size' => $chunkSize
+                ]);
+
+                // Check available disk space
+                $freeSpace = disk_free_space($videosDir);
+                if ($freeSpace < ($totalSize * 2)) {
+                    Log::error('Insufficient disk space for episode merge', [
+                        'required' => $totalSize * 2,
+                        'available' => $freeSpace,
+                        'directory' => $videosDir
+                    ]);
+                    $this->cleanUpChunks($tempDir);
+                    throw new \Exception("Insufficient disk space for file merge.");
+                }
+
+                // Check if directory is writable
+                if (!is_writable($videosDir)) {
+                    Log::error('Episode videos directory is not writable', ['directory' => $videosDir]);
+                    $this->cleanUpChunks($tempDir);
+                    throw new \Exception("Videos directory is not writable.");
+                }
+
                 $finalFile = fopen($finalPath, 'wb');
+                if (!$finalFile) {
+                    Log::error('Failed to open final episode file', ['file_path' => $finalPath]);
+                    $this->cleanUpChunks($tempDir);
+                    throw new \Exception("Failed to create final file.");
+                }
+
+                $totalBytesWritten = 0;
                 for ($i = 1; $i <= $totalChunks; $i++) {
                     $chunkFile = $tempDir . '/chunk_' . str_pad($i, 6, '0', STR_PAD_LEFT) . '.part';
+                    
+                    Log::info('Processing episode chunk', [
+                        'episode_id' => $episode->id,
+                        'chunk_number' => $i,
+                        'chunk_file' => $chunkFile
+                    ]);
+                    
                     if (file_exists($chunkFile)) {
                         $chunkData = file_get_contents($chunkFile);
                         if ($chunkData === false) {
+                            Log::error('Failed to read episode chunk data', [
+                                'episode_id' => $episode->id,
+                                'chunk_number' => $i,
+                                'chunk_file' => $chunkFile
+                            ]);
                             fclose($finalFile);
-                            unlink($finalPath);
+                            if (file_exists($finalPath)) {
+                                unlink($finalPath);
+                            }
                             $this->cleanUpChunks($tempDir);
                             throw new \Exception("Failed to read chunk {$i}");
                         }
-                        fwrite($finalFile, $chunkData);
+                        
+                        $bytesWritten = fwrite($finalFile, $chunkData);
+                        if ($bytesWritten === false) {
+                            Log::error('Failed to write episode chunk to final file', [
+                                'episode_id' => $episode->id,
+                                'chunk_number' => $i,
+                                'chunk_size' => strlen($chunkData)
+                            ]);
+                            fclose($finalFile);
+                            if (file_exists($finalPath)) {
+                                unlink($finalPath);
+                            }
+                            $this->cleanUpChunks($tempDir);
+                            throw new \Exception("Failed to write chunk {$i} to final file.");
+                        }
+                        
+                        $totalBytesWritten += $bytesWritten;
+                        Log::info('Episode chunk written successfully', [
+                            'episode_id' => $episode->id,
+                            'chunk_number' => $i,
+                            'bytes_written' => $bytesWritten,
+                            'total_bytes' => $totalBytesWritten
+                        ]);
                     } else {
+                        Log::error('Missing episode chunk file', [
+                            'episode_id' => $episode->id,
+                            'chunk_number' => $i,
+                            'chunk_file' => $chunkFile,
+                            'existing_chunks' => glob($tempDir . '/chunk_*.part')
+                        ]);
                         fclose($finalFile);
-                        unlink($finalPath);
+                        if (file_exists($finalPath)) {
+                            unlink($finalPath);
+                        }
                         $this->cleanUpChunks($tempDir);
                         throw new \Exception("Missing chunk {$i}");
                     }
                 }
                 fclose($finalFile);
+
+                Log::info('Episode file merge completed successfully', [
+                    'episode_id' => $episode->id,
+                    'file_path' => $finalPath,
+                    'expected_size' => $totalSize,
+                    'total_bytes_written' => $totalBytesWritten
+                ]);
+
+                // Set proper file permissions
+                chmod($finalPath, 0644);
 
                 // Verify final file size
                 $finalFileSize = filesize($finalPath);

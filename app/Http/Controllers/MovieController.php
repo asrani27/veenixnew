@@ -541,6 +541,15 @@ class MovieController extends Controller
     }
 
     /**
+     * Show upload video page for movie
+     */
+    public function upload($movieId)
+    {
+        $movie = Movie::findOrFail($movieId);
+        return view('admin.movie.upload', compact('movie'));
+    }
+
+    /**
      * Upload video for movie
      */
     public function uploadVideo(Request $request, $movieId)

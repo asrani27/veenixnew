@@ -185,6 +185,15 @@
                                             </path>
                                         </svg>
                                     </a>
+                                    <a href="{{ route('admin.movies.upload', $item->id) }}"
+                                        class="inline-flex items-center p-2 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-lg shadow-md hover:shadow-lg transform hover:scale-105 transition-all duration-200"
+                                        title="Upload Movie Video">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
+                                            </path>
+                                        </svg>
+                                    </a>
                                     <form action="{{ route('admin.movies.destroy', $item->id) }}" method="POST"
                                         class="inline"
                                         onsubmit="return confirm('Are you sure you want to delete this movie? This will also delete all associated video files from cloud storage.');">
@@ -356,5 +365,6 @@ document.addEventListener('visibilitychange', function() {
 window.addEventListener('beforeunload', function() {
     clearInterval(refreshInterval);
 });
+
 </script>
 @endsection
