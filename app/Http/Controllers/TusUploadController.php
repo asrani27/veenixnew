@@ -2,29 +2,33 @@
 
 namespace App\Http\Controllers;
 
+use TusPhp\Config;
 use App\Models\Movie;
 use TusPhp\Tus\Server;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Jobs\ConvertVideoToHlsJob;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class TusUploadController extends Controller
 {
     public function handle(Request $request)
     {
+        // Pastikan cache path berada di folder storage
+        $cachePath = storage_path('app/tus-cache');
+
+        if (!file_exists($cachePath)) {
+            mkdir($cachePath, 0775, true);
+        }
+
+        // Atur lokasi cache ke path yang aman
+        Config::set('tus.cache.dir', $cachePath);
         $server = new Server();
 
         $server->setApiPath('/api/upload');
         $server->setUploadDir(storage_path('app/uploads'));
 
-        $cacheDir = storage_path('app/tus-cache');
-        if (!file_exists($cacheDir)) {
-            mkdir($cacheDir, 0777, true);
-        }
-
-        $server->setCacheDir($cacheDir);
 
         // ✅ Tambahkan event listener untuk upload complete
         $server->event()->addListener('tus-server.upload.complete', function ($event) {
