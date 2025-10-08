@@ -15,15 +15,6 @@ class TusUploadController extends Controller
 {
     public function handle(Request $request)
     {
-        // Pastikan cache path berada di folder storage
-        $cachePath = storage_path('app/tus-cache');
-
-        if (!file_exists($cachePath)) {
-            mkdir($cachePath, 0775, true);
-        }
-
-        // Atur lokasi cache ke path yang aman
-        Config::set('tus.cache.dir', $cachePath);
         $server = new Server();
 
         $server->setApiPath('/api/upload');
