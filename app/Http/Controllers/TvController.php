@@ -755,8 +755,8 @@ class TvController extends Controller
                 'vote_count' => 'nullable|integer|min:0',
                 'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'download_links' => 'nullable|array',
-                'download_links.*.url' => 'required_with:download_links.*|url',
-                'download_links.*.quality' => 'required_with:download_links.*|in:540p,720p',
+                'download_links.*.url' => 'nullable|url|required_if:download_links.*.url,!=,""',
+                'download_links.*.quality' => 'required_if:download_links.*.url,!=,""|in:540p,720p',
                 'download_links.*.label' => 'nullable|string|max:255',
                 'download_links.*.is_active' => 'nullable|boolean',
                 'download_links.*.sort_order' => 'nullable|integer|min:0'
@@ -941,8 +941,8 @@ class TvController extends Controller
                 'vote_count' => 'nullable|integer|min:0',
                 'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
                 'download_links' => 'nullable|array',
-                'download_links.*.url' => 'required_with:download_links.*|url',
-                'download_links.*.quality' => 'required_with:download_links.*|in:540p,720p',
+                'download_links.*.url' => 'nullable|url|required_if:download_links.*.url,!=,""',
+                'download_links.*.quality' => 'required_if:download_links.*.url,!=,""|in:540p,720p',
                 'download_links.*.label' => 'nullable|string|max:255',
                 'download_links.*.is_active' => 'nullable|boolean',
                 'download_links.*.sort_order' => 'nullable|integer|min:0'

@@ -2,8 +2,8 @@
 
 namespace App\Jobs;
 
+use App\Models\Episode;
 use App\Models\Movie;
-use App\Models\ApiSetting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -11,43 +11,46 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Exception;
 
 class ConvertVideoToHlsJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $timeout = 3600; // 1 hour timeout
+    public $tries = 2;
+    public $backoff = [60, 300]; // 1 minute, then 5 minutes
+
     protected string $inputPath;
     protected string $outputDir;
     protected string $filename;
     protected ?string $movieId;
+    protected ?string $episodeId;
 
-    public function __construct(string $inputPath, string $outputDir, string $filename, ?string $movieId = null)
+    /**
+     * Create a new job instance.
+     */
+    public function __construct(string $inputPath, string $outputDir, string $filename, ?string $movieId = null, ?string $episodeId = null)
     {
         $this->inputPath = $inputPath;
         $this->outputDir = $outputDir;
         $this->filename = pathinfo($filename, PATHINFO_FILENAME);
         $this->movieId = $movieId;
+        $this->episodeId = $episodeId;
     }
 
     /**
-     * Jalankan proses konversi.
+     * Execute the job.
      */
     public function handle(): void
     {
         try {
-            Log::info("🎬 Memulai konversi HLS untuk: {$this->filename}");
-
-            // Jika movieId ada, ambil slug dari tabel movie untuk outputDir
-            if ($this->movieId) {
-                $movie = Movie::find($this->movieId);
-                if ($movie && $movie->slug) {
-                    // Gunakan slug dari movie sebagai outputDir
-                    $this->outputDir = 'hls_videos/' . $movie->slug;
-                    Log::info("📂 Menggunakan slug dari movie: {$movie->slug} untuk output directory");
-                } else {
-                    Log::warning("⚠️ Movie dengan ID {$this->movieId} tidak ditemukan atau tidak memiliki slug, menggunakan outputDir default");
-                }
-            }
+            Log::info("🎬 Memulai konversi HLS untuk: {$this->filename}", [
+                'movie_id' => $this->movieId,
+                'episode_id' => $this->episodeId,
+                'input_path' => $this->inputPath,
+                'output_dir' => $this->outputDir
+            ]);
 
             // Path absolut
             $inputFile = storage_path("app/{$this->inputPath}");
@@ -85,10 +88,13 @@ class ConvertVideoToHlsJob implements ShouldQueue
             $this->uploadToWasabi($outputDir, $outputM3u8);
         } catch (\Throwable $e) {
             Log::error("🚨 Error ConvertVideoToHlsJob: " . $e->getMessage());
+
+            // Update status dengan error jika ada movie atau episode
+            $this->updateErrorStatus($e->getMessage());
+
             throw $e;
         }
     }
-
 
     /**
      * Upload hasil konversi HLS ke Wasabi storage
@@ -107,12 +113,26 @@ class ConvertVideoToHlsJob implements ShouldQueue
                 return;
             }
 
-            // Tentukan path di Wasabi berdasarkan movie slug
+            // Tentukan path di Wasabi berdasarkan tipe konten
             $wasabiPath = '';
+
             if ($this->movieId) {
                 $movie = Movie::find($this->movieId);
                 if ($movie && $movie->slug) {
                     $wasabiPath .= '/' . $movie->slug;
+                }
+            } elseif ($this->episodeId) {
+                $episode = Episode::find($this->episodeId);
+
+                if ($episode) {
+                    $tvShow = $episode->tv;
+                    $tvTitle = $tvShow ? $tvShow->title : 'Unknown TV Show';
+                    $wasabiPath .= '/' . sprintf(
+                        '%s/Season %d/Episode %d',
+                        $tvTitle,
+                        $episode->season_number,
+                        $episode->episode_number
+                    );
                 }
             }
 
@@ -142,34 +162,69 @@ class ConvertVideoToHlsJob implements ShouldQueue
 
             Log::info("🎉 Upload ke Wasabi selesai! Total file: " . count($uploadedFiles));
 
-            // Update movie fields setelah upload berhasil
-            if ($this->movieId) {
-                $movie = Movie::find($this->movieId);
-                if ($movie && $movie->slug) {
-                    $movie->update([
-                        'hls_master_playlist_path' => $movie->slug . '/index.m3u8',
-                        'hls_status' => 'completed'
-                    ]);
-                    Log::info("✅ Movie fields updated - hls_master_playlist_path: {$movie->slug}/index.m3u8, hls_status: completed");
-                } else {
-                    Log::warning("⚠️ Movie tidak ditemukan atau tidak memiliki slug untuk update fields");
-                }
-            }
+            // Update fields setelah upload berhasil
+            $this->updateSuccessStatus($wasabiPath);
         } catch (\Throwable $e) {
             Log::error("🚨 Error upload ke Wasabi: " . $e->getMessage());
 
-            // Update status movie jika ada error
-            if ($this->movieId) {
-                $movie = Movie::find($this->movieId);
-                if ($movie) {
-                    $movie->update([
-                        'hls_status' => 'failed',
-                        'hls_error' => $e->getMessage()
-                    ]);
-                }
-            }
+            // Update status dengan error
+            $this->updateErrorStatus($e->getMessage());
 
             throw $e;
+        }
+    }
+
+    /**
+     * Update status sukses untuk movie atau episode
+     */
+    private function updateSuccessStatus(string $wasabiPath): void
+    {
+        if ($this->movieId) {
+            $movie = Movie::find($this->movieId);
+            if ($movie && $movie->slug) {
+                $movie->update([
+                    'hls_master_playlist_path' => $movie->slug . '/index.m3u8',
+                    'hls_status' => 'completed'
+                ]);
+                Log::info("✅ Movie fields updated - hls_master_playlist_path: {$movie->slug}/index.m3u8, hls_status: completed");
+            }
+        } elseif ($this->episodeId) {
+            $episode = Episode::find($this->episodeId);
+            if ($episode) {
+                $episode->update([
+                    'hls_status' => 'completed',
+                    'master_playlist_path' => $wasabiPath . '/index.m3u8',
+                    'hls_playlist_path' => $wasabiPath . '/index.m3u8',
+                    'hls_progress' => 100,
+                    'hls_processed_at' => now(),
+                    'hls_error_message' => null
+                ]);
+                Log::info("✅ Episode fields updated - hls_status: completed, master_playlist_path: {$wasabiPath}/index.m3u8");
+            }
+        }
+    }
+
+    /**
+     * Update status error untuk movie atau episode
+     */
+    private function updateErrorStatus(string $errorMessage): void
+    {
+        if ($this->movieId) {
+            $movie = Movie::find($this->movieId);
+            if ($movie) {
+                $movie->update([
+                    'hls_status' => 'failed',
+                    'hls_error' => $errorMessage
+                ]);
+            }
+        } elseif ($this->episodeId) {
+            $episode = Episode::find($this->episodeId);
+            if ($episode) {
+                $episode->update([
+                    'hls_status' => 'failed',
+                    'hls_error_message' => $errorMessage
+                ]);
+            }
         }
     }
 
@@ -236,5 +291,21 @@ class ConvertVideoToHlsJob implements ShouldQueue
             Log::error("🚨 Error cleanupOriginalUploadFile: " . $e->getMessage());
             Log::error("🚨 Stack trace: " . $e->getTraceAsString());
         }
+    }
+
+    /**
+     * Handle a job failure.
+     */
+    public function failed(Exception $exception): void
+    {
+        Log::error('HLS conversion job failed permanently', [
+            'movie_id' => $this->movieId,
+            'episode_id' => $this->episodeId,
+            'filename' => $this->filename,
+            'error' => $exception->getMessage()
+        ]);
+
+        // Update status dengan error
+        $this->updateErrorStatus('Job failed: ' . $exception->getMessage());
     }
 }

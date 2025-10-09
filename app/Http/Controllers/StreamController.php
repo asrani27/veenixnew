@@ -18,14 +18,14 @@ class StreamController extends Controller
 
         $data = Movie::where('tmdb_id', $tmdb_id)->first();
 
-        if (!$data || empty($data->file)) {
+        if (!$data || empty($data->hls_master_playlist_path)) {
             return view('stream', [
                 'urlVideo' => null,
                 'errorMessage' => "Video Tidak Bisa Di Putar"
             ]);
         }
 
-        $filePath = $data->file;
+        $filePath = $data->hls_master_playlist_path;
         $errorMessage = null;
         $isHls = false;
         // Check if file is HLS (m3u8)
@@ -154,7 +154,7 @@ class StreamController extends Controller
             } else {
                 // Episode found, get the video URL
                 $filePath = $episode->hls_playlist_path;
-                
+
                 // Check if HLS playlist path exists and is not null
                 if (!empty($filePath)) {
                     // HLS playlist is always m3u8 format

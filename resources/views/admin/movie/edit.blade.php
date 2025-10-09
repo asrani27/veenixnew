@@ -299,82 +299,6 @@
                     </div>
                 </div>
 
-                <!-- Video File Section -->
-                <div class="mb-8">
-                    <h4 class="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Video File</h4>
-                    <div class="grid grid-cols-1 gap-6">
-                        <div>
-                            <label for="file" class="block text-sm font-medium text-gray-700 mb-1">File Video
-                                (Filename In Your Storage)</label>
-                            <input type="text" name="file" id="file" value="{{ old('file', $movie->file) }}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                            @error('file')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
-                            
-                            <!-- Resumable.js Upload Section -->
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Upload New Video File</label>
-                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
-                                    <div id="resumable-dropzone" class="cursor-pointer">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
-                                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                        </svg>
-                                        <p class="mt-2 text-sm text-gray-600">
-                                            <span class="font-medium">Click to upload</span> or drag and drop
-                                        </p>
-                                        <p class="text-xs text-gray-500">MP4, AVI, MKV, MOV, WMV, FLV, WebM up to 2GB</p>
-                                    </div>
-                                    <input id="resumable-file-input" type="file" class="hidden" accept="video/*">
-                                </div>
-                                
-                                <!-- Upload Progress -->
-                                <div id="upload-progress" class="hidden mt-4">
-                                    <div class="flex items-center justify-between mb-2">
-                                        <span class="text-sm font-medium text-gray-700">Uploading...</span>
-                                        <span id="upload-percentage" class="text-sm text-gray-600">0%</span>
-                                    </div>
-                                    <div class="w-full bg-gray-200 rounded-full h-2">
-                                        <div id="upload-progress-bar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
-                                    </div>
-                                    <p id="upload-status" class="text-sm text-gray-600 mt-2"></p>
-                                </div>
-                                
-                                <!-- Upload Success -->
-                                <div id="upload-success" class="hidden mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                                    <div class="flex items-center">
-                                        <svg class="h-5 w-5 text-green-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                        </svg>
-                                        <span class="text-sm font-medium text-green-800">Upload completed successfully!</span>
-                                    </div>
-                                    <p id="upload-file-info" class="text-sm text-green-700 mt-1"></p>
-                                </div>
-                                
-                                <!-- Upload Error -->
-                                <div id="upload-error" class="hidden mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-                                    <div class="flex items-center">
-                                        <svg class="h-5 w-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                                        </svg>
-                                        <span class="text-sm font-medium text-red-800">Upload failed</span>
-                                    </div>
-                                    <p id="upload-error-message" class="text-sm text-red-700 mt-1"></p>
-                                </div>
-                                
-                            </div>
-                            
-                            <br />
-                            <br />
-                            <a href="/movie/stream/{{$movie->tmdb_id}}" target="_blank"
-                                class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                Stream
-                            </a>
-                        </div>
-
-                    </div>
-                </div>
-
                 <!-- Download Links Section -->
                 <div class="mb-8">
                     <h4 class="text-md font-semibold text-gray-800 mb-4 border-b pb-2">Download Links</h4>
@@ -387,44 +311,38 @@
                                 @foreach($movie->downloadLinks as $index => $link)
                                 <div class="flex items-center gap-2 p-3 bg-gray-50 rounded-lg download-link-item">
                                     <div class="flex-1 grid grid-cols-1 md:grid-cols-5 gap-2">
-                                        <input type="text" 
-                                               name="download_links[{{ $index }}][url]" 
-                                               value="{{ $link->url }}" 
-                                               placeholder="Download URL"
-                                               class="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                        <select name="download_links[{{ $index }}][quality]" 
-                                                class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                            <option value="540p" {{ $link->quality == '540p' ? 'selected' : '' }}>540p</option>
-                                            <option value="720p" {{ $link->quality == '720p' ? 'selected' : '' }}>720p</option>
+                                        <input type="text" name="download_links[{{ $index }}][url]"
+                                            value="{{ $link->url }}" placeholder="Download URL"
+                                            class="md:col-span-2 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <select name="download_links[{{ $index }}][quality]"
+                                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                            <option value="540p" {{ $link->quality == '540p' ? 'selected' : '' }}>540p
+                                            </option>
+                                            <option value="720p" {{ $link->quality == '720p' ? 'selected' : '' }}>720p
+                                            </option>
                                         </select>
-                                        <input type="text" 
-                                               name="download_links[{{ $index }}][label]" 
-                                               value="{{ $link->label }}" 
-                                               placeholder="Label (optional)"
-                                               class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
-                                        <input type="number" 
-                                               name="download_links[{{ $index }}][sort_order]" 
-                                               value="{{ $link->sort_order }}" 
-                                               placeholder="Order"
-                                               min="0"
-                                               class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <input type="text" name="download_links[{{ $index }}][label]"
+                                            value="{{ $link->label }}" placeholder="Label (optional)"
+                                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                        <input type="number" name="download_links[{{ $index }}][sort_order]"
+                                            value="{{ $link->sort_order }}" placeholder="Order" min="0"
+                                            class="px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
                                     </div>
                                     <div class="flex items-center gap-2">
                                         <label class="flex items-center">
-                                            <input type="checkbox" 
-                                                   name="download_links[{{ $index }}][is_active]" 
-                                                   value="1" 
-                                                   {{ $link->is_active ? 'checked' : '' }}
-                                                   class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
+                                            <input type="checkbox" name="download_links[{{ $index }}][is_active]"
+                                                value="1" {{ $link->is_active ? 'checked' : '' }}
+                                            class="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300
+                                            focus:ring focus:ring-blue-200 focus:ring-opacity-50">
                                             <span class="ml-1 text-sm text-gray-700">Active</span>
                                         </label>
-                                        <button type="button" 
-                                                onclick="removeDownloadLink(this)" 
-                                                class="text-red-600 hover:text-red-800 text-sm font-medium">
+                                        <button type="button" onclick="removeDownloadLink(this)"
+                                            class="text-red-600 hover:text-red-800 text-sm font-medium">
                                             Remove
                                         </button>
                                     </div>
-                                    <input type="hidden" name="download_links[{{ $index }}][id]" value="{{ $link->id }}">
+                                    <input type="hidden" name="download_links[{{ $index }}][id]"
+                                        value="{{ $link->id }}">
                                 </div>
                                 @endforeach
                             </div>
@@ -439,9 +357,8 @@
                             <div id="new-download-links" class="space-y-2">
                                 <!-- New links will be added here -->
                             </div>
-                            <button type="button" 
-                                    onclick="addNewDownloadLink()" 
-                                    class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200">
+                            <button type="button" onclick="addNewDownloadLink()"
+                                class="mt-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors duration-200">
                                 <i class="fas fa-plus mr-2"></i>Add Download Link
                             </button>
                         </div>
@@ -475,7 +392,6 @@
 @endpush
 
 @push('scripts')
-<script src="{{ asset('js/resumable.js') }}"></script>
 <script>
     // Global functions for download links management
     let newDownloadLinkIndex = {{ $movie->downloadLinks ? $movie->downloadLinks->count() : 0 }};
@@ -566,152 +482,6 @@
             });
         }
 
-        // Initialize Resumable.js
-        if (typeof Resumable !== 'undefined') {
-            const r = new Resumable({
-                target: '{{ route("upload.resumable.upload") }}',
-                chunkSize: 2 * 1024 * 1024, // 2MB chunks
-                simultaneousUploads: 3,
-                testChunks: true,
-                throttleProgressCallbacks: 1,
-                query: {
-                    _token: '{{ csrf_token() }}',
-                    movie_id: '{{ $movie->id }}'
-                }
-            });
-
-            // UI Elements
-            const dropzone = document.getElementById('resumable-dropzone');
-            const fileInput = document.getElementById('resumable-file-input');
-            const progressDiv = document.getElementById('upload-progress');
-            const progressBar = document.getElementById('upload-progress-bar');
-            const percentageSpan = document.getElementById('upload-percentage');
-            const statusP = document.getElementById('upload-status');
-            const successDiv = document.getElementById('upload-success');
-            const fileInfoP = document.getElementById('upload-file-info');
-            const errorDiv = document.getElementById('upload-error');
-            const errorMessageP = document.getElementById('upload-error-message');
-            const fileInputField = document.getElementById('file');
-
-            // Show/hide functions
-            function showProgress() {
-                progressDiv.classList.remove('hidden');
-                successDiv.classList.add('hidden');
-                errorDiv.classList.add('hidden');
-            }
-
-            function showSuccess(filename, size) {
-                progressDiv.classList.add('hidden');
-                errorDiv.classList.add('hidden');
-                successDiv.classList.remove('hidden');
-                fileInfoP.textContent = `${filename} (${formatFileSize(size)})`;
-            }
-
-            function showError(message) {
-                progressDiv.classList.add('hidden');
-                successDiv.classList.add('hidden');
-                errorDiv.classList.remove('hidden');
-                errorMessageP.textContent = message;
-            }
-
-            function formatFileSize(bytes) {
-                if (bytes === 0) return '0 Bytes';
-                const k = 1024;
-                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-                const i = Math.floor(Math.log(bytes) / Math.log(k));
-                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-            }
-
-            // Resumable.js events
-            r.on('fileAdded', function(file) {
-                showProgress();
-                statusP.textContent = `Preparing upload: ${file.fileName}`;
-                r.upload();
-            });
-
-            r.on('progress', function() {
-                const progress = r.progress() * 100;
-                progressBar.style.width = progress + '%';
-                percentageSpan.textContent = Math.round(progress) + '%';
-                statusP.textContent = `Uploading... ${Math.round(progress)}% complete`;
-            });
-
-            r.on('fileSuccess', function(file, message) {
-                try {
-                    const response = JSON.parse(message);
-                    if (response.success) {
-                        showSuccess(response.filename, response.size);
-                        // Update the file input field with the uploaded filename
-                        fileInputField.value = response.filename;
-                        statusP.textContent = 'Upload completed successfully! HLS conversion will start in the background.';
-                    } else {
-                        showError(response.error || 'Upload failed');
-                    }
-                } catch (e) {
-                    showError('Invalid server response');
-                }
-            });
-
-            r.on('fileError', function(file, message) {
-                try {
-                    const response = JSON.parse(message);
-                    showError(response.error || message || 'Upload failed');
-                } catch (e) {
-                    showError(message || 'Upload failed');
-                }
-            });
-
-            r.on('pause', function() {
-                statusP.textContent = 'Upload paused';
-            });
-
-            r.on('resume', function() {
-                statusP.textContent = 'Resuming upload...';
-            });
-
-            // Drag and drop
-            dropzone.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                dropzone.classList.add('border-blue-500', 'bg-blue-50');
-            });
-
-            dropzone.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                dropzone.classList.remove('border-blue-500', 'bg-blue-50');
-            });
-
-            dropzone.addEventListener('drop', function(e) {
-                e.preventDefault();
-                dropzone.classList.remove('border-blue-500', 'bg-blue-50');
-                
-                const files = e.dataTransfer.files;
-                for (let i = 0; i < files.length; i++) {
-                    r.addFile(files[i]);
-                }
-            });
-
-            // Click to upload
-            dropzone.addEventListener('click', function() {
-                fileInput.click();
-            });
-
-            fileInput.addEventListener('change', function(e) {
-                const files = e.target.files;
-                for (let i = 0; i < files.length; i++) {
-                    r.addFile(files[i]);
-                }
-                // Clear the input so the same file can be selected again
-                e.target.value = '';
-            });
-
-            // Assign dropzone to Resumable.js
-            r.assignDrop(dropzone);
-            r.assignBrowse(fileInput);
-
-            console.log('Resumable.js initialized successfully');
-        } else {
-            console.error('Resumable.js not loaded');
-        }
 
     });
 </script>
