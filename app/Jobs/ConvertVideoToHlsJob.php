@@ -141,6 +141,20 @@ class ConvertVideoToHlsJob implements ShouldQueue
             $this->cleanupOriginalUploadFile();
 
             Log::info("🎉 Upload ke Wasabi selesai! Total file: " . count($uploadedFiles));
+
+            // Update movie fields setelah upload berhasil
+            if ($this->movieId) {
+                $movie = Movie::find($this->movieId);
+                if ($movie && $movie->slug) {
+                    $movie->update([
+                        'hls_master_playlist_path' => $movie->slug . '/index.m3u8',
+                        'hls_status' => 'completed'
+                    ]);
+                    Log::info("✅ Movie fields updated - hls_master_playlist_path: {$movie->slug}/index.m3u8, hls_status: completed");
+                } else {
+                    Log::warning("⚠️ Movie tidak ditemukan atau tidak memiliki slug untuk update fields");
+                }
+            }
         } catch (\Throwable $e) {
             Log::error("🚨 Error upload ke Wasabi: " . $e->getMessage());
 
