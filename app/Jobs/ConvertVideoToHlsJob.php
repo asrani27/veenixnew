@@ -30,13 +30,13 @@ class ConvertVideoToHlsJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct(string $inputPath, string $outputDir, string $filename, ?string $movieId = null, ?string $episodeId = null)
+    public function __construct(string $inputPath, string $outputDir, string $filename, $movieId = null, $episodeId = null)
     {
         $this->inputPath = $inputPath;
         $this->outputDir = $outputDir;
         $this->filename = pathinfo($filename, PATHINFO_FILENAME);
-        $this->movieId = $movieId;
-        $this->episodeId = $episodeId;
+        $this->movieId = $movieId ? (string) $movieId : null;
+        $this->episodeId = $episodeId ? (string) $episodeId : null;
     }
 
     /**

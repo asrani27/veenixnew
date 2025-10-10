@@ -107,11 +107,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('admin/tv/{tv}/season/{season}/episode', [TvController::class, 'storeEpisode'])->name('admin.tv.episode.store');
     Route::post('admin/tv/{tv}/import-seasons', [TvController::class, 'importSeasonsAndEpisodes'])->name('admin.tv.import-seasons');
 
-    // Episode HLS Routes
+    // Episode HLS Routes (from EpisodeController)
     Route::get('admin/episodes/{episode}/hls-status', [EpisodeController::class, 'getHlsStatus'])->name('admin.episodes.hls-status');
     Route::post('admin/episodes/{episode}/retry-hls-conversion', [EpisodeController::class, 'retryHlsConversion'])->name('admin.episodes.retry-hls-conversion');
     Route::post('admin/episodes/{episode}/upload-video', [EpisodeController::class, 'uploadVideo'])->name('admin.episodes.upload-video');
     Route::get('admin/episodes/{episode}/check-chunk', [EpisodeController::class, 'checkChunk'])->name('admin.episodes.check-chunk');
+
+    // TV Episode HLS Routes (from TvController)
+    Route::post('admin/tv/episode/{episode}/convert-hls', [TvController::class, 'convertEpisodeHls'])->name('admin.tv.episode.convert-hls');
+    Route::get('admin/tv/episode/{episode}/hls-progress', [TvController::class, 'getEpisodeHlsProgress'])->name('admin.tv.episode.hls-progress');
+    Route::post('admin/tv/episode/{episode}/retry-hls-conversion', [TvController::class, 'retryEpisodeHlsConversion'])->name('admin.tv.episode.retry-hls-conversion');
 
     Route::get('settings/profile', Profile::class)->name('settings.profile');
     Route::get('settings/password', Password::class)->name('settings.password');

@@ -190,134 +190,184 @@
                             </div>
                         </div>
 
-                        <!-- Video File Upload -->
+                        <!-- Episode Video Upload Process Table -->
                         <div>
-                            <label for="file" class="block text-sm font-medium text-gray-700 mb-2">Episode Video File</label>
-                            <input type="text" name="file" id="file" value="{{ old('file', $episode->file) }}"
-                                class="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                placeholder="video filename in storage">
-                            @error('file')
-                            <p class="mt-1 text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Episode Video Upload Process</label>
+                            <input type="hidden" name="file" id="file" value="{{ old('file', $episode->file) }}">
                             
-                            <!-- TUS Upload Section -->
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium text-gray-700 mb-2">Upload New Video File</label>
-                                <div id="uploadArea"
-                                    class="relative border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50 cursor-pointer">
-                                    <input type="file" id="fileInput" class="hidden" accept="video/*" />
-
-                                    <!-- Upload Icon -->
-                                    <div class="mb-4">
-                                        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor"
-                                            viewBox="0 0 24 24">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
-                                            </path>
-                                        </svg>
-                                    </div>
-
-                                    <!-- Upload Text -->
-                                    <div class="mb-4">
-                                        <p class="text-lg font-medium text-gray-900 mb-2">Drag & drop video file here</p>
-                                        <p class="text-sm text-gray-500">or click to browse</p>
-                                        <p class="text-xs text-gray-400 mt-2">Supported formats: MP4, AVI, MOV, MKV (Max: 2GB)</p>
-                                    </div>
-
-                                    <!-- Selected File Info -->
-                                    <div id="fileInfo" class="hidden">
-                                        <div class="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-lg">
-                                            <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                                <path fill-rule="evenodd"
-                                                    d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"
-                                                    clip-rule="evenodd"></path>
-                                            </svg>
-                                            <span id="fileName" class="text-sm font-medium"></span>
-                                            <span id="fileSize" class="text-sm ml-2"></span>
-                                        </div>
-                                    </div>
+                            <!-- Upload Process Table -->
+                            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                                    <h4 class="text-sm font-medium text-gray-900">Video Upload Process</h4>
+                                    <p class="text-xs text-gray-600 mt-1">Complete each step to make your episode ready for streaming.</p>
                                 </div>
 
-                                <!-- Upload Button -->
-                                <div class="mt-4 text-center">
-                                    <button id="uploadBtn" disabled
-                                        class="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 transform hover:scale-105">
-                                        <span class="flex items-center">
-                                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12">
-                                                </path>
-                                            </svg>
-                                            <span id="uploadBtnText">Start Upload</span>
-                                        </span>
-                                    </button>
-                                </div>
+                                <div class="p-4">
+                                    <!-- Process Table -->
+                                    <div class="overflow-x-auto">
+                                        <table class="w-full border-collapse">
+                                            <thead>
+                                                <tr class="border-b border-gray-200">
+                                                    <th class="text-left py-2 px-3 font-medium text-gray-700 w-8 text-xs">No</th>
+                                                    <th class="text-left py-2 px-3 font-medium text-gray-700 text-xs">Keterangan</th>
+                                                    <th class="text-left py-2 px-3 font-medium text-gray-700 text-xs">Status</th>
+                                                    <th class="text-center py-2 px-3 font-medium text-gray-700 text-xs">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <!-- Step 1: Upload File -->
+                                                <tr class="border-b border-gray-100" id="uploadStep">
+                                                    <td class="py-3 px-3">
+                                                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-blue-100 text-blue-600 font-medium text-xs">
+                                                            1
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3">
+                                                        <div class="flex items-center">
+                                                            <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                                            </svg>
+                                                            <div>
+                                                                <p class="font-medium text-gray-900 text-sm">Proses Upload</p>
+                                                                <p class="text-xs text-gray-500">Upload file video ke server lokal menggunakan TUS protocol</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3">
+                                                        <div id="uploadStatus" class="flex items-center">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                                <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <circle cx="10" cy="10" r="6" fill="currentColor" opacity="0.3"></circle>
+                                                                </svg>
+                                                                Menunggu File
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3 text-center">
+                                                        <div id="uploadAction">
+                                                            <input type="file" id="fileInput" class="hidden" accept="video/*" />
+                                                            <button id="uploadBtn" class="px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
+                                                                <span class="flex items-center">
+                                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                                                                    </svg>
+                                                                    <span id="uploadBtnText">Pilih File</span>
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
 
-                                <!-- Progress Section -->
-                                <div id="progressSection" class="hidden mt-4">
-                                    <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-                                        <!-- Progress Header -->
-                                        <div class="flex items-center justify-between mb-3">
-                                            <div class="flex items-center">
-                                                <div id="progressIcon" class="mr-3">
-                                                    <!-- Dynamic icon will be inserted here -->
-                                                </div>
-                                                <div>
-                                                    <h4 class="text-sm font-medium text-gray-900">Uploading Video</h4>
-                                                    <p id="progressStatus" class="text-xs text-gray-500">Initializing...</p>
-                                                </div>
-                                            </div>
-                                            <div class="text-right">
-                                                <span id="progressPercent" class="text-lg font-bold text-blue-600">0%</span>
-                                                <p class="text-xs text-gray-500">Complete</p>
-                                            </div>
-                                        </div>
+                                                <!-- Step 2: Convert to HLS -->
+                                                <tr class="border-b border-gray-100" id="convertStep">
+                                                    <td class="py-3 px-3">
+                                                        <div class="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-100 text-yellow-600 font-medium text-xs">
+                                                            2
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3">
+                                                        <div class="flex items-center">
+                                                            <svg class="w-4 h-4 text-gray-400 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                                                            </svg>
+                                                            <div>
+                                                                <p class="font-medium text-gray-900 text-sm">Convert To HLS</p>
+                                                                <p class="text-xs text-gray-500">Konversi video ke format HLS untuk streaming</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3">
+                                                        <div id="convertStatus" class="flex items-center">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                                                <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                                    <circle cx="10" cy="10" r="6" fill="currentColor" opacity="0.3"></circle>
+                                                                </svg>
+                                                                Menunggu Upload
+                                                            </span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-3 px-3 text-center">
+                                                        <div id="convertAction">
+                                                            <button id="convertHlsBtn" disabled class="px-3 py-1.5 bg-yellow-600 text-white text-xs font-medium rounded hover:bg-yellow-700 focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200">
+                                                                <span class="flex items-center">
+                                                                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                                                    </svg>
+                                                                    <span id="convertBtnText">Convert</span>
+                                                                </span>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
 
-                                        <!-- Progress Bar -->
-                                        <div class="relative">
-                                            <div class="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                                                <div id="progressBar"
-                                                    class="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-300 ease-out"
-                                                    style="width: 0%"></div>
-                                            </div>
-                                            <!-- Progress Details -->
-                                            <div class="flex justify-between mt-2 text-xs text-gray-500">
-                                                <span id="bytesUploaded">0 MB</span>
-                                                <span id="bytesTotal">0 MB</span>
-                                            </div>
-                                        </div>
+                                    <!-- File Upload Area (Hidden by default) -->
+                                    <div id="uploadArea" class="hidden mt-4">
+                                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors duration-200 bg-gray-50 hover:bg-blue-50 cursor-pointer">
+                                            <input type="file" id="fileInputHidden" class="hidden" accept="video/*" />
 
-                                        <!-- Upload Speed -->
-                                        <div class="mt-3 flex items-center justify-between">
-                                            <div class="flex items-center text-sm text-gray-600">
-                                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                                        d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                                            <!-- Upload Icon -->
+                                            <div class="mb-4">
+                                                <svg class="mx-auto h-10 w-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
                                                 </svg>
-                                                <span id="uploadSpeed">0 MB/s</span>
                                             </div>
-                                            <div class="text-sm text-gray-600">
-                                                <span id="timeRemaining">Calculating...</span>
+
+                                            <!-- Upload Text -->
+                                            <div class="mb-4">
+                                                <p class="text-sm font-medium text-gray-900 mb-2">Drag & drop video file here</p>
+                                                <p class="text-xs text-gray-500">or click to browse</p>
+                                                <p class="text-xs text-gray-400 mt-1">Supported formats: MP4, AVI, MOV, MKV (Max: 2GB)</p>
+                                            </div>
+
+                                            <!-- Selected File Info -->
+                                            <div id="fileInfo" class="hidden">
+                                                <div class="inline-flex items-center px-3 py-2 bg-blue-100 text-blue-800 rounded-lg">
+                                                    <svg class="w-3 h-3 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                                                    </svg>
+                                                    <span id="fileName" class="text-xs font-medium"></span>
+                                                    <span id="fileSize" class="text-xs ml-2"></span>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <!-- Success/Error Messages -->
-                                <div id="uploadMessage" class="hidden mt-4">
-                                    <!-- Dynamic message will be inserted here -->
+                                    <!-- Progress Sections -->
+                                    <div id="uploadProgress" class="hidden mt-4">
+                                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-medium text-blue-800">Uploading Video</span>
+                                                <span id="uploadProgressPercent" class="text-xs font-medium text-blue-800">0%</span>
+                                            </div>
+                                            <div class="w-full bg-blue-200 rounded-full h-1.5">
+                                                <div id="uploadProgressBar" class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                            </div>
+                                            <p id="uploadProgressStatus" class="text-xs text-blue-600 mt-1">Initializing upload...</p>
+                                        </div>
+                                    </div>
+
+                                    <div id="convertProgress" class="hidden mt-4">
+                                        <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-medium text-yellow-800">Converting to HLS</span>
+                                                <span id="convertProgressPercent" class="text-xs font-medium text-yellow-800">0%</span>
+                                            </div>
+                                            <div class="w-full bg-yellow-200 rounded-full h-1.5">
+                                                <div id="convertProgressBar" class="bg-yellow-600 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                                            </div>
+                                            <p id="convertProgressStatus" class="text-xs text-yellow-600 mt-1">Starting conversion...</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Messages -->
+                                    <div id="messageArea" class="mt-4">
+                                        <!-- Dynamic messages will be inserted here -->
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <!-- Stream Button -->
-                            @if($episode->file)
-                            <div class="mt-4">
-                                <a href="{{ route('tv.episode.stream', ['slug' => $episode->tv->slug, 'season_number' => $episode->season_number, 'episode_number' => $episode->episode_number]) }}" target="_blank"
-                                    class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                                    Stream Episode
-                                </a>
-                            </div>
-                            @endif
                         </div>
                     </div>
                 </div>
@@ -346,52 +396,117 @@
 <script src="https://cdn.jsdelivr.net/npm/tus-js-client@3/dist/tus.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // TUS Upload Implementation
+    // Table-based Upload Implementation
     const uploadBtn = document.getElementById('uploadBtn');
     const uploadBtnText = document.getElementById('uploadBtnText');
     const fileInput = document.getElementById('fileInput');
     const uploadArea = document.getElementById('uploadArea');
+    const fileInputHidden = document.getElementById('fileInputHidden');
     const fileInfo = document.getElementById('fileInfo');
     const fileName = document.getElementById('fileName');
     const fileSize = document.getElementById('fileSize');
-    const progressSection = document.getElementById('progressSection');
-    const progressIcon = document.getElementById('progressIcon');
-    const progressStatus = document.getElementById('progressStatus');
-    const progressPercent = document.getElementById('progressPercent');
-    const progressBar = document.getElementById('progressBar');
-    const bytesUploaded = document.getElementById('bytesUploaded');
-    const bytesTotal = document.getElementById('bytesTotal');
-    const uploadSpeed = document.getElementById('uploadSpeed');
-    const timeRemaining = document.getElementById('timeRemaining');
-    const uploadMessage = document.getElementById('uploadMessage');
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadProgressBar = document.getElementById('uploadProgressBar');
+    const uploadProgressPercent = document.getElementById('uploadProgressPercent');
+    const uploadProgressStatus = document.getElementById('uploadProgressStatus');
+    const convertProgress = document.getElementById('convertProgress');
+    const convertProgressBar = document.getElementById('convertProgressBar');
+    const convertProgressPercent = document.getElementById('convertProgressPercent');
+    const convertProgressStatus = document.getElementById('convertProgressStatus');
+    const messageArea = document.getElementById('messageArea');
+    const convertHlsBtn = document.getElementById('convertHlsBtn');
+    const convertBtnText = document.getElementById('convertBtnText');
     const fileInputField = document.getElementById('file');
     
     const TUS_ENDPOINT = "{{ config('app.url') }}/api/upload";
+    const CONVERT_ENDPOINT = "{{ route('admin.tv.episode.convert-hls', $episode->id) }}";
+    const PROGRESS_ENDPOINT = "{{ route('admin.tv.episode.hls-progress', $episode->id) }}";
+    
     let upload = null;
-    let startTime = null;
-    let lastBytesUploaded = 0;
-    let speedUpdateInterval = null;
+    let conversionInterval = null;
+    let uploadedFileUrl = null;
 
-    // Format file size
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        const i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    // Status update functions for table
+    function updateStepStatus(step, status, details = '') {
+        const statusElement = document.getElementById(step + 'Status');
+        const actionElement = document.getElementById(step + 'Action');
+        
+        let statusHtml = '';
+        let isDisabled = true;
+        
+        switch(status) {
+            case 'waiting':
+                statusHtml = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="6" fill="currentColor" opacity="0.3"></circle>
+                        </svg>
+                        ${details || 'Menunggu'}
+                    </span>
+                `;
+                break;
+            case 'ready':
+                statusHtml = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9.5H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                        ${details || 'Ready'}
+                    </span>
+                `;
+                isDisabled = false;
+                break;
+            case 'processing':
+                statusHtml = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                        <svg class="animate-spin w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <circle cx="10" cy="10" r="6" fill="currentColor" opacity="0.3"></circle>
+                        </svg>
+                        ${details || 'Processing'}
+                    </span>
+                `;
+                isDisabled = true;
+                break;
+            case 'completed':
+                statusHtml = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                        <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                        </svg>
+                        ${details || 'Completed'}
+                    </span>
+                `;
+                isDisabled = true;
+                break;
+            case 'error':
+                statusHtml = `
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                        <svg class="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+                        </svg>
+                        ${details || 'Error'}
+                    </span>
+                `;
+                isDisabled = false;
+                break;
+        }
+        
+        statusElement.innerHTML = statusHtml;
+        
+        // Update button state
+        const button = actionElement.querySelector('button');
+        if (button) {
+            button.disabled = isDisabled;
+            if (isDisabled) {
+                button.classList.add('opacity-50', 'cursor-not-allowed');
+            } else {
+                button.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
     }
 
-    // Format time remaining
-    function formatTimeRemaining(seconds) {
-        if (!seconds || seconds === Infinity) return 'Calculating...';
-        if (seconds < 60) return Math.round(seconds) + 's';
-        if (seconds < 3600) return Math.round(seconds / 60) + 'm';
-        return Math.round(seconds / 3600) + 'h';
-    }
-
-    // Show upload message
+    // Show message
     function showMessage(message, type = 'info') {
-        uploadMessage.classList.remove('hidden');
         const bgColor = type === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
                        type === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 
                        'bg-blue-50 border-blue-200 text-blue-800';
@@ -401,7 +516,7 @@ document.addEventListener('DOMContentLoaded', function() {
                    '<svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>' :
                    '<svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>';
         
-        uploadMessage.innerHTML = `
+        messageArea.innerHTML = `
             <div class="flex items-center p-4 border rounded-lg ${bgColor}">
                 <div class="mr-3">${icon}</div>
                 <div>
@@ -411,28 +526,13 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
     }
 
-    // Update progress icon
-    function updateProgressIcon(type) {
-        const icons = {
-            uploading: '<svg class="animate-spin h-6 w-6 text-blue-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>',
-            success: '<svg class="h-6 w-6 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg>',
-            error: '<svg class="h-6 w-6 text-red-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg>'
-        };
-        progressIcon.innerHTML = icons[type] || icons.uploading;
-    }
-
-    // Calculate upload speed and time remaining
-    function updateSpeedStats(currentBytes, totalBytes) {
-        if (!startTime) return;
-        
-        const currentTime = Date.now();
-        const elapsedTime = (currentTime - startTime) / 1000; // in seconds
-        const bytesPerSecond = currentBytes / elapsedTime;
-        const remainingBytes = totalBytes - currentBytes;
-        const remainingTime = remainingBytes / bytesPerSecond;
-        
-        uploadSpeed.textContent = formatFileSize(bytesPerSecond) + '/s';
-        timeRemaining.textContent = formatTimeRemaining(remainingTime);
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
     // Handle file selection
@@ -457,73 +557,43 @@ document.addEventListener('DOMContentLoaded', function() {
         fileSize.textContent = '(' + formatFileSize(file.size) + ')';
         fileInfo.classList.remove('hidden');
         uploadBtn.disabled = false;
-        uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        uploadBtnText.textContent = 'Upload';
         
-        // Hide previous messages
-        uploadMessage.classList.add('hidden');
+        // Update status
+        updateStepStatus('upload', 'ready', 'File ready');
     }
+
+    // Upload button click event
+    uploadBtn.addEventListener('click', () => {
+        if (uploadBtnText.textContent === 'Pilih File') {
+            fileInput.click();
+        } else if (uploadBtnText.textContent === 'Upload') {
+            startUpload();
+        }
+    });
 
     // File input change event
     fileInput.addEventListener('change', (e) => {
         handleFileSelect(e.target.files[0]);
     });
 
-    // Drag and drop events
-    uploadArea.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        uploadArea.classList.add('border-blue-500', 'bg-blue-100');
-    });
-
-    uploadArea.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('border-blue-500', 'bg-blue-100');
-    });
-
-    uploadArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        uploadArea.classList.remove('border-blue-500', 'bg-blue-100');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            handleFileSelect(files[0]);
-        }
-    });
-
-    // Click to upload
-    uploadArea.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    // Upload button click event
-    uploadBtn.addEventListener('click', () => {
+    // Start upload function
+    function startUpload() {
         const file = fileInput.files[0];
         if (!file) {
             showMessage('Please select a file first', 'error');
             return;
         }
 
-        // Reset states
-        startTime = Date.now();
-        lastBytesUploaded = 0;
-        progressSection.classList.remove('hidden');
-        uploadMessage.classList.add('hidden');
-        uploadBtn.disabled = true;
+        // Show upload progress
+        uploadProgress.classList.remove('hidden');
+        updateStepStatus('upload', 'processing', 'Uploading...');
         uploadBtnText.textContent = 'Uploading...';
-        updateProgressIcon('uploading');
-        progressStatus.textContent = 'Initializing upload...';
-
-        // Start speed update interval
-        speedUpdateInterval = setInterval(() => {
-            if (upload && upload._progress) {
-                updateSpeedStats(upload._progress.bytesUploaded, upload._progress.bytesTotal);
-            }
-        }, 1000);
 
         // Create TUS upload
         upload = new tus.Upload(file, {
             endpoint: TUS_ENDPOINT,
-            chunkSize: 1 * 1024 * 1024, // 1MB per chunk
+            chunkSize: 1 * 1024 * 1024,
             metadata: {
                 filename: file.name,
                 filetype: file.type,
@@ -531,47 +601,47 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             onError: function (error) {
                 console.error("Upload failed:", error);
-                clearInterval(speedUpdateInterval);
-                updateProgressIcon('error');
-                progressStatus.textContent = 'Upload failed';
+                updateStepStatus('upload', 'error', 'Upload failed');
                 uploadBtnText.textContent = 'Try Again';
-                uploadBtn.disabled = false;
                 showMessage('Upload failed: ' + error.message, 'error');
             },
             onProgress: function (bytesUploaded, bytesTotal) {
                 const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(1);
-                
-                // Update progress bar
-                progressBar.style.width = percentage + '%';
-                progressPercent.textContent = percentage + '%';
-                
-                // Update file sizes
-                bytesUploaded.textContent = formatFileSize(bytesUploaded);
-                bytesTotal.textContent = formatFileSize(bytesTotal);
-                
-                // Update status
-                progressStatus.textContent = 'Uploading...';
-                
-                // Store progress for speed calculation
-                upload._progress = { bytesUploaded, bytesTotal };
+                uploadProgressBar.style.width = percentage + '%';
+                uploadProgressPercent.textContent = percentage + '%';
+                uploadProgressStatus.textContent = 'Uploading...';
             },
             onSuccess: function () {
-                clearInterval(speedUpdateInterval);
-                updateProgressIcon('success');
-                progressStatus.textContent = 'Upload completed successfully';
-                progressPercent.textContent = '100%';
-                progressBar.style.width = '100%';
-                uploadBtnText.textContent = 'Upload Complete';
-                uploadSpeed.textContent = '0 MB/s';
-                timeRemaining.textContent = 'Completed';
-                showMessage('Episode video uploaded successfully! The file will be processed for streaming.', 'success');
-                console.log("File available at:", upload.url);
+                // Use the correct file URL based on the uploaded file
+                const filename = file.name;
+                uploadedFileUrl = "{{ config('app.url') }}/storage/uploads/" + filename;
+                
+                updateStepStatus('upload', 'completed', 'Upload Complete');
+                uploadProgressPercent.textContent = '100%';
+                uploadProgressBar.style.width = '100%';
+                uploadProgressStatus.textContent = 'Upload completed successfully';
+                uploadBtnText.textContent = 'Pilih File';
+                
+                // Manually enable upload button for new uploads
+                uploadBtn.disabled = false;
+                uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                // Update hidden file input
+                fileInputField.value = filename;
+                
+                // Save the filename to database via AJAX
+                saveFilenameToDatabase(filename);
+                
+                // Enable next step
+                updateStepStatus('convert', 'ready', 'Ready to convert');
+                showMessage('Video uploaded successfully! Click "Convert" to process the video for streaming.', 'success');
+                
+                console.log('Upload completed. File URL:', uploadedFileUrl);
             }
         });
 
-        // Start upload
         upload.start();
-    });
+    }
 
     // Download Links Management
     let downloadLinkIndex = 0;
@@ -678,6 +748,274 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add one empty download link if no existing ones
         addDownloadLink();
     }
+
+    // Save filename to database after upload
+    async function saveFilenameToDatabase(filename) {
+        try {
+            const response = await fetch('{{ route("admin.tv.episode.update", ["tv" => $tv->id, "season" => $season->season_number, "episode" => $episode->episode_number]) }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: new URLSearchParams({
+                    '_method': 'PUT',
+                    'file': filename,
+                    // Include other form data that might be needed
+                    'name': document.querySelector('input[name="name"]')?.value || '',
+                    'overview': document.querySelector('textarea[name="overview"]')?.value || '',
+                    'air_date': document.querySelector('input[name="air_date"]')?.value || '',
+                    'runtime': document.querySelector('input[name="runtime"]')?.value || '',
+                    'vote_average': document.querySelector('input[name="vote_average"]')?.value || '',
+                    'vote_count': document.querySelector('input[name="vote_count"]')?.value || ''
+                })
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to save filename to database');
+                return false;
+            }
+            
+            const result = await response.json();
+            console.log('Filename saved to database successfully');
+            return true;
+        } catch (error) {
+            console.error('Error saving filename to database:', error);
+            return false;
+        }
+    }
+
+    // Convert HLS button click event
+    convertHlsBtn.addEventListener('click', async () => {
+        if (convertHlsBtn.disabled) return;
+        
+        try {
+            convertProgress.classList.remove('hidden');
+            updateStepStatus('convert', 'processing', 'Converting...');
+            convertBtnText.textContent = 'Converting...';
+            
+            const response = await fetch(CONVERT_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+                },
+                body: JSON.stringify({
+                    file_url: uploadedFileUrl
+                })
+            });
+            
+            if (!response.ok) {
+                throw new Error('Conversion request failed');
+            }
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Start polling for progress
+                pollConversionProgress();
+            } else {
+                throw new Error(result.message || 'Conversion failed to start');
+            }
+            
+        } catch (error) {
+            console.error('Conversion error:', error);
+            updateStepStatus('convert', 'error', 'Conversion failed');
+            convertBtnText.textContent = 'Try Again';
+            showMessage('Conversion failed: ' + error.message, 'error');
+        }
+    });
+
+    // Poll conversion progress
+    function pollConversionProgress() {
+        conversionInterval = setInterval(async () => {
+            try {
+                const response = await fetch(PROGRESS_ENDPOINT);
+                if (!response.ok) return;
+                
+                const data = await response.json();
+                
+                if (data.status === 'processing') {
+                    convertProgressBar.style.width = data.progress + '%';
+                    convertProgressPercent.textContent = data.progress + '%';
+                    convertProgressStatus.textContent = data.message || 'Processing...';
+                    
+                } else if (data.status === 'completed') {
+                    clearInterval(conversionInterval);
+                    updateStepStatus('convert', 'completed', 'HLS Ready');
+                    convertProgressPercent.textContent = '100%';
+                    convertProgressBar.style.width = '100%';
+                    convertProgressStatus.textContent = 'Conversion completed successfully';
+                    convertBtnText.textContent = 'Converted';
+                    
+                    showMessage('Video converted successfully! Your video is now ready for streaming.', 'success');
+                    
+                } else if (data.status === 'failed') {
+                    clearInterval(conversionInterval);
+                    updateStepStatus('convert', 'error', 'Conversion failed');
+                    convertBtnText.textContent = 'Try Again';
+                    showMessage('Conversion failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            } catch (error) {
+                console.error('Error polling conversion progress:', error);
+            }
+        }, 2000);
+    }
+    
+    // Update HLS status UI
+    function updateHlsStatus(status, message, progress = null) {
+        // Update status icon
+        const iconHtml = {
+            processing: '<div class="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center"><svg class="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div>',
+            completed: '<div class="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path></svg></div>',
+            failed: '<div class="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center"><svg class="w-6 h-6 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path></svg></div>'
+        };
+        
+        if (hlsStatusIcon && iconHtml[status]) {
+            hlsStatusIcon.innerHTML = iconHtml[status];
+        }
+        
+        // Update status message
+        if (hlsStatusMessage) {
+            hlsStatusMessage.textContent = message;
+        }
+        
+        // Update status title
+        const statusTitle = hlsStatusIcon?.closest('.bg-gray-50')?.querySelector('h5');
+        if (statusTitle) {
+            const titles = {
+                processing: 'Converting to HLS...',
+                completed: 'Conversion Complete',
+                failed: 'Conversion Failed'
+            };
+            statusTitle.textContent = titles[status] || 'Unknown Status';
+        }
+    }
+    
+    // Monitor conversion progress
+    let progressInterval = null;
+    
+    function startProgressMonitoring(episodeId) {
+        // Clear any existing interval
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        
+        // Start polling for progress
+        progressInterval = setInterval(() => {
+            fetch(`/admin/tv/episode/${episodeId}/hls-progress`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'completed') {
+                        updateHlsStatus('completed', 'Episode is ready for HLS streaming');
+                        clearInterval(progressInterval);
+                        
+                        // Reload page after a short delay to show updated UI
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 2000);
+                    } else if (data.status === 'failed') {
+                        updateHlsStatus('failed', data.error_message || 'Conversion failed. Please try again.');
+                        clearInterval(progressInterval);
+                        
+                        // Restore convert button
+                        if (convertHlsBtn) {
+                            convertHlsBtn.disabled = false;
+                            convertHlsBtn.innerHTML = `
+                                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                                </svg>
+                                Retry Conversion
+                            `;
+                        }
+                    } else if (data.status === 'processing') {
+                        updateHlsStatus('processing', data.message || 'Processing video file...', data.progress);
+                        
+                        // Update progress bar if it exists
+                        const progressBar = document.querySelector('.bg-gradient-to-r.from-blue-500');
+                        const progressPercent = document.querySelector('.text-blue-600');
+                        if (progressBar && data.progress) {
+                            progressBar.style.width = data.progress + '%';
+                        }
+                        if (progressPercent && data.progress) {
+                            progressPercent.textContent = data.progress + '%';
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error checking HLS progress:', error);
+                });
+        }, 3000); // Check every 3 seconds
+    }
+    
+    // Check existing episode status and initialize interface
+    function initializeEpisodeStatus() {
+        const episodeData = @json($episode->toArray());
+        
+        console.log('Episode data:', episodeData); // Debug log
+        
+        // Check if file exists (upload step)
+        if (episodeData.file && episodeData.file !== null && episodeData.file !== '') {
+            console.log('File exists:', episodeData.file); // Debug log
+            
+            // File exists - show completed status but keep button enabled
+            updateStepStatus('upload', 'completed', 'Upload Complete');
+            uploadBtnText.textContent = 'Pilih File';
+            uploadedFileUrl = "{{ config('app.url') }}/storage/uploads/" + episodeData.file;
+            
+            // Manually enable upload button for new uploads
+            uploadBtn.disabled = false;
+            uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            
+            // Check HLS status
+            const hlsStatus = episodeData.hls_status || 'pending';
+            const hlsProgress = episodeData.hls_progress || 0;
+            
+            if (hlsStatus === 'completed') {
+                updateStepStatus('convert', 'completed', 'HLS Ready');
+                convertBtnText.textContent = 'Converted';
+            } else if (hlsStatus === 'processing') {
+                updateStepStatus('convert', 'processing', 'Converting...');
+                convertBtnText.textContent = 'Converting...';
+                convertProgress.classList.remove('hidden');
+                convertProgressBar.style.width = hlsProgress + '%';
+                convertProgressPercent.textContent = hlsProgress + '%';
+                convertProgressStatus.textContent = 'Converting to HLS...';
+                
+                // Start polling for progress if processing
+                pollConversionProgress();
+            } else if (hlsStatus === 'failed') {
+                updateStepStatus('convert', 'error', 'Conversion failed');
+                convertBtnText.textContent = 'Try Again';
+            } else {
+                updateStepStatus('convert', 'ready', 'Ready to convert');
+            }
+        } else {
+            console.log('No file exists'); // Debug log
+            
+            // No file uploaded yet - show waiting status but keep button enabled
+            updateStepStatus('upload', 'waiting', 'Menunggu File');
+            updateStepStatus('convert', 'waiting', 'Menunggu Upload');
+            
+            // Ensure upload button is enabled
+            uploadBtn.disabled = false;
+            uploadBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            uploadBtnText.textContent = 'Pilih File';
+        }
+    }
+
+    // Initialize on page load
+    initializeEpisodeStatus();
+
+    // Clean up interval when page is unloaded
+    window.addEventListener('beforeunload', () => {
+        if (progressInterval) {
+            clearInterval(progressInterval);
+        }
+        if (conversionInterval) {
+            clearInterval(conversionInterval);
+        }
+    });
 });
 </script>
 @endpush

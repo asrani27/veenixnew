@@ -754,6 +754,7 @@ class TvController extends Controller
                 'vote_average' => 'nullable|numeric|min:0|max:10',
                 'vote_count' => 'nullable|integer|min:0',
                 'still' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'file' => 'nullable|string|max:255',
                 'download_links' => 'nullable|array',
                 'download_links.*.url' => 'nullable|url|required_if:download_links.*.url,!=,""',
                 'download_links.*.quality' => 'required_if:download_links.*.url,!=,""|in:540p,720p',
@@ -775,6 +776,11 @@ class TvController extends Controller
             $episode->runtime = $request->runtime;
             $episode->vote_average = $request->vote_average;
             $episode->vote_count = $request->vote_count;
+
+            // Handle file field update
+            if ($request->has('file') && $request->file !== null) {
+                $episode->file = $request->file;
+            }
 
             // Handle still image upload
             if ($request->hasFile('still')) {
@@ -1150,6 +1156,234 @@ class TvController extends Controller
             return view('tv-download', compact('tv'));
         } catch (\Exception $e) {
             abort(404);
+        }
+    }
+
+    /**
+     * Convert episode video to HLS format
+     */
+    public function convertEpisodeHls(Request $request, $episodeId)
+    {
+        try {
+            $request->validate([
+                'file_url' => 'required|string'
+            ]);
+
+            $episode = \App\Models\Episode::findOrFail($episodeId);
+
+            // Check if episode already has a file
+            if (!$episode->file) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No video file found for this episode'
+                ], 400);
+            }
+
+            // Extract file path from URL
+            $fileUrl = $request->file_url;
+            $filePath = parse_url($fileUrl, PHP_URL_PATH);
+
+            Log::info("🔍 Processing episode TUS URL: {$fileUrl}");
+            Log::info("🔍 Extracted path: {$filePath}");
+
+            // Handle TUS URL format: /api/upload/uuid
+            if (str_contains($filePath, '/api/upload/')) {
+                $filePath = basename($filePath);
+                Log::info("🔧 Extracted UUID from TUS URL: {$filePath}");
+            } else {
+                // Handle traditional file paths
+                if (str_contains($filePath, '/storage/uploads/')) {
+                    $filePath = str_replace('/storage/uploads/', '', $filePath);
+                } elseif (str_contains($filePath, '/uploads/')) {
+                    $filePath = str_replace('/uploads/', '', $filePath);
+                }
+                Log::info("🔧 Processed traditional file path: {$filePath}");
+            }
+
+            // Remove any leading slashes
+            $filePath = ltrim($filePath, '/');
+
+            // Check if file exists in storage - try the correct location first
+            $fullFilePath = 'app/public/uploads/' . $filePath;
+            $actualFilePath = storage_path($fullFilePath);
+
+            Log::info("🔍 Checking episode file existence: {$actualFilePath}");
+
+            if (!file_exists($actualFilePath)) {
+                // Try alternative locations
+                $altPath1 = storage_path('app/uploads/' . $filePath);
+                $altPath2 = storage_path('app/' . $filePath);
+                
+                Log::warning("⚠️ Episode file not found in primary location: {$actualFilePath}");
+                Log::info("🔍 Trying alternative location 1: {$altPath1}");
+                Log::info("🔍 Trying alternative location 2: {$altPath2}");
+
+                if (file_exists($altPath1)) {
+                    $fullFilePath = 'app/uploads/' . $filePath;
+                    $actualFilePath = $altPath1;
+                    Log::info("✅ Found episode file in alternative location 1");
+                } elseif (file_exists($altPath2)) {
+                    $fullFilePath = 'app/' . $filePath;
+                    $actualFilePath = $altPath2;
+                    Log::info("✅ Found episode file in alternative location 2");
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Episode video file not found in storage. Tried: ' . $actualFilePath . ', ' . $altPath1 . ', ' . $altPath2
+                    ], 404);
+                }
+            } else {
+                Log::info("✅ Found episode file in primary location: {$actualFilePath}");
+            }
+
+            // Update episode with the file path
+            $episode->update([
+                'file' => $filePath,
+                'hls_status' => 'pending',
+                'hls_progress' => 0,
+                'hls_error_message' => null
+            ]);
+
+            // Dispatch the conversion job for episode
+            \App\Jobs\ConvertVideoToHlsJob::dispatch($filePath, 'temp/hls/episode_' . $episode->id, basename($filePath), null, $episode->id);
+
+            Log::info('Episode HLS conversion dispatched', [
+                'episode_id' => $episodeId,
+                'tv_show' => $episode->tv->title,
+                'season' => $episode->season_number,
+                'episode' => $episode->episode_number,
+                'file_path' => $filePath
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Episode HLS conversion started successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error starting episode HLS conversion', [
+                'episode_id' => $episodeId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start episode HLS conversion: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get HLS conversion status for an episode
+     */
+    public function getEpisodeHlsProgress($episodeId)
+    {
+        try {
+            $episode = \App\Models\Episode::findOrFail($episodeId);
+
+            $status = $episode->hls_status ?? 'pending';
+            $progress = $episode->hls_progress ?? 0;
+            $message = $this->getEpisodeHlsStatusMessage($episode);
+
+            return response()->json([
+                'status' => $status,
+                'progress' => $progress,
+                'message' => $message,
+                'error' => $episode->hls_error_message
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting episode HLS progress', [
+                'episode_id' => $episodeId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'failed',
+                'progress' => 0,
+                'message' => 'Error getting episode progress: ' . $e->getMessage(),
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get human-readable HLS status message for episode
+     */
+    private function getEpisodeHlsStatusMessage($episode)
+    {
+        $status = $episode->hls_status;
+        $progress = $episode->hls_progress ?? 0;
+
+        // Provide more detailed messages based on progress
+        if ($status === 'processing') {
+            if ($progress < 20) {
+                return 'Initializing episode conversion...';
+            } elseif ($progress < 40) {
+                return 'Encoding episode video stream...';
+            } elseif ($progress < 60) {
+                return 'Encoding episode audio stream...';
+            } elseif ($progress < 75) {
+                return 'Creating episode HLS segments...';
+            } else {
+                return 'Finalizing episode conversion...';
+            }
+        }
+
+        return match ($status) {
+            'pending' => 'Waiting to start episode conversion...',
+            'processing' => 'Converting episode to HLS format...',
+            'completed' => 'Episode conversion completed successfully!',
+            'failed' => $episode->hls_error_message ?: 'Episode conversion failed. Please try again.',
+            default => 'Unknown episode status',
+        };
+    }
+
+    /**
+     * Retry HLS conversion for an episode
+     */
+    public function retryEpisodeHlsConversion($episodeId)
+    {
+        try {
+            $episode = \App\Models\Episode::findOrFail($episodeId);
+
+            // Check if episode has a video file
+            if (!$episode->file) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No video file found for this episode'
+                ], 400);
+            }
+
+            // Reset HLS status
+            $episode->update([
+                'hls_status' => 'pending',
+                'hls_progress' => 0,
+                'hls_error_message' => null
+            ]);
+
+            // Dispatch the conversion job for episode
+            \App\Jobs\ConvertVideoToHlsJob::dispatch($episode->file, 'temp/hls/episode_' . $episode->id, basename($episode->file), null, $episode->id);
+
+            Log::info('Episode HLS conversion retry dispatched', [
+                'episode_id' => $episodeId,
+                'tv_show' => $episode->tv->title,
+                'season' => $episode->season_number,
+                'episode' => $episode->episode_number
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Episode HLS conversion retry started successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error retrying episode HLS conversion', [
+                'episode_id' => $episodeId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retry episode HLS conversion: ' . $e->getMessage()
+            ], 500);
         }
     }
 }
