@@ -52,8 +52,8 @@ class ConvertVideoToHlsJob implements ShouldQueue
                 'output_dir' => $this->outputDir
             ]);
 
-            // Path absolut
-            $inputFile = storage_path("app/{$this->inputPath}");
+            // Path absolut - check both old and new locations
+            $inputFile = $this->findInputFile();
             $outputDir = storage_path("app/{$this->outputDir}");
 
             if (!file_exists($inputFile)) {
@@ -253,37 +253,48 @@ class ConvertVideoToHlsJob implements ShouldQueue
     }
 
     /**
-     * Hapus file original dari folder uploads setelah proses konversi dan upload selesai
+     * Hapus file original dari folder public/uploads setelah proses konversi dan upload selesai
      */
     private function cleanupOriginalUploadFile(): void
     {
         try {
-            Log::info("🔍 Mulai cleanup file original, inputPath: {$this->inputPath}");
+            Log::info("🔍 Mulai cleanup file original dari public/uploads, inputPath: {$this->inputPath}");
 
-            $originalFilePath = storage_path("app/{$this->inputPath}");
-            Log::info("🔍 Path lengkap file original: {$originalFilePath}");
+            // Extract filename dari inputPath
+            $filename = basename($this->inputPath);
+            
+            // Path ke public/uploads
+            $publicUploadsPath = public_path("uploads/{$filename}");
+            Log::info("🔍 Path lengkap file di public/uploads: {$publicUploadsPath}");
 
-            if (file_exists($originalFilePath)) {
-                $fileSize = filesize($originalFilePath);
-                Log::info("📁 File ditemukan, ukuran: " . number_format($fileSize / 1024 / 1024, 2) . " MB");
+            if (file_exists($publicUploadsPath)) {
+                $fileSize = filesize($publicUploadsPath);
+                Log::info("📁 File ditemukan di public/uploads, ukuran: " . number_format($fileSize / 1024 / 1024, 2) . " MB");
 
-                if (unlink($originalFilePath)) {
-                    Log::info("🗑️ File original dari uploads dihapus: " . basename($originalFilePath));
+                if (unlink($publicUploadsPath)) {
+                    Log::info("🗑️ File original dari public/uploads dihapus: " . basename($publicUploadsPath));
                 } else {
-                    Log::error("❌ Gagal menghapus file original: " . basename($originalFilePath));
+                    Log::error("❌ Gagal menghapus file original dari public/uploads: " . basename($publicUploadsPath));
                 }
             } else {
-                Log::warning("⚠️ File original tidak ditemukan: {$originalFilePath}");
+                Log::warning("⚠️ File original tidak ditemukan di public/uploads: {$publicUploadsPath}");
 
-                // Cek jika file ada di uploads langsung
-                $alternativePath = storage_path("app/uploads/" . basename($this->inputPath));
-                Log::info("🔍 Cek path alternatif: {$alternativePath}");
+                // Cek di storage paths sebagai fallback (untuk backward compatibility)
+                $storagePaths = [
+                    storage_path("app/{$this->inputPath}"),
+                    storage_path("app/uploads/{$filename}"),
+                    storage_path("app/public/uploads/{$filename}")
+                ];
 
-                if (file_exists($alternativePath)) {
-                    if (unlink($alternativePath)) {
-                        Log::info("🗑️ File original dari uploads (alternatif) dihapus: " . basename($alternativePath));
-                    } else {
-                        Log::error("❌ Gagal menghapus file original (alternatif): " . basename($alternativePath));
+                foreach ($storagePaths as $storagePath) {
+                    Log::info("🔍 Cek path alternatif: {$storagePath}");
+                    if (file_exists($storagePath)) {
+                        if (unlink($storagePath)) {
+                            Log::info("🗑️ File original dari storage path dihapus: " . basename($storagePath));
+                            break; // Stop setelah menemukan dan menghapus file
+                        } else {
+                            Log::error("❌ Gagal menghapus file original dari storage path: " . basename($storagePath));
+                        }
                     }
                 }
             }
@@ -291,6 +302,64 @@ class ConvertVideoToHlsJob implements ShouldQueue
             Log::error("🚨 Error cleanupOriginalUploadFile: " . $e->getMessage());
             Log::error("🚨 Stack trace: " . $e->getTraceAsString());
         }
+    }
+
+    /**
+     * Find the input file in both old and new locations
+     */
+    private function findInputFile(): string
+    {
+        // Extract filename from inputPath if it contains a URL
+        $filename = $this->inputPath;
+
+        // If inputPath contains a URL (like /api/upload/uuid), extract just the UUID/filename
+        if (str_contains($this->inputPath, '/api/upload/')) {
+            $filename = basename($this->inputPath);
+            Log::info("🔧 Extracted filename from URL: {$filename}");
+        }
+
+        // Remove any leading slashes to prevent double slashes
+        $filename = ltrim($filename, '/');
+
+        Log::info("🔍 Searching for file with filename: {$filename}");
+
+        // Try new location first: storage/app/public/uploads/
+        $newPath = storage_path("app/public/uploads/{$filename}");
+        if (file_exists($newPath)) {
+            Log::info("📁 File found in new location: {$newPath}");
+            return $newPath;
+        }
+
+        // Try old location: storage/app/uploads/
+        $oldPath = storage_path("app/uploads/{$filename}");
+        if (file_exists($oldPath)) {
+            Log::info("📁 File found in old location: {$oldPath}");
+            return $oldPath;
+        }
+
+        // Try direct path (for backward compatibility)
+        $directPath = storage_path("app/{$filename}");
+        if (file_exists($directPath)) {
+            Log::info("📁 File found in direct location: {$directPath}");
+            return $directPath;
+        }
+
+        // Try with original inputPath (in case it's already a correct path)
+        $originalPath = storage_path("app/public/uploads/{$this->inputPath}");
+        if (file_exists($originalPath)) {
+            Log::info("📁 File found with original inputPath: {$originalPath}");
+            return $originalPath;
+        }
+
+        Log::error("🚨 File not found in any location:");
+        Log::error("  - Original inputPath: {$this->inputPath}");
+        Log::error("  - Extracted filename: {$filename}");
+        Log::error("  - New location: {$newPath}");
+        Log::error("  - Old location: {$oldPath}");
+        Log::error("  - Direct location: {$directPath}");
+        Log::error("  - Original path: {$originalPath}");
+
+        return $newPath; // Return new path as default (will trigger file not found error)
     }
 
     /**

@@ -19,10 +19,17 @@ class TusUploadController extends Controller
         $server = new Server();
 
         $server->setApiPath('/api/upload');
-        $server->setUploadDir(storage_path('app/uploads'));
+        
+        // Set upload directory to storage/app/public/uploads and create if not exists
+        $uploadDir = storage_path('app/public/uploads');
+        if (!file_exists($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+            Log::info("📁 Created uploads directory: " . $uploadDir);
+        }
+        $server->setUploadDir($uploadDir);
 
         Log::info("🚀 TUS Upload initialized");
-        
+
         // ✅ Tambahkan event listener untuk upload complete
         $server->event()->addListener('tus-server.upload.complete', function ($event) {
             $file = $event->getFile();
@@ -31,58 +38,164 @@ class TusUploadController extends Controller
                 $metadata = $details['metadata'] ?? [];
                 $movieId = $metadata['movie_id'] ?? null;
                 $episodeId = $metadata['episode_id'] ?? null;
-                $filepath = $file->getFilePath();
-                
-                // Buat path relatif untuk job
-                $inputPath = str_replace(storage_path('app') . '/', '', $filepath);
-                $outputDir = 'hls_videos';
+                $filename = basename($file->getFilePath());
+                $filePath = $file->getFilePath();
 
-                // Handle Movie Upload
+                // Check video file integrity
+                $isCorrupted = $this->checkVideoIntegrity($filePath);
+                
+                if ($isCorrupted) {
+                    Log::error("🚨 Video file is corrupted: " . $filename);
+                    // Delete corrupted file
+                    if (file_exists($filePath)) {
+                        unlink($filePath);
+                    }
+                    return;
+                }
+
+                Log::info("✅ Video file integrity check passed: " . $filename);
+
+                // Handle File Movie Upload
                 if ($movieId) {
                     $movie = Movie::find($movieId);
                     if ($movie) {
-                        $filename = $movie->slug;
-                        Log::info("✅ Movie Upload complete: {$filename} ({$filepath}), movie_id={$movieId}");
-
-                        // Update movie file field
-                        $movie->update(['file' => $filename]);
-
-                        // Dispatch unified convert job for movie
-                        Log::info("🚀 Dispatch ConvertVideoToHlsJob for movie: {$filename}");
-                        ConvertVideoToHlsJob::dispatch($inputPath, $outputDir, $filename, $movieId, null);
+                        $movie->update([
+                            'file' => $filename,
+                            'hls_status' => null,
+                            'hls_progress' => 0
+                        ]);
+                        Log::info("📹 Movie file updated and HLS status reset for movie ID: " . $movieId);
                     } else {
-                        Log::warning("⚠️ Movie not found for movie_id={$movieId}");
+                        Log::warning("⚠️ Movie not found with ID: " . $movieId);
                     }
                 }
-                // Handle Episode Upload
+                // Handle File Episode Upload
                 elseif ($episodeId) {
                     $episode = Episode::find($episodeId);
                     if ($episode) {
-                        $tvShow = $episode->tv;
-                        $filename = Str::slug($tvShow->title) . '-s' . str_pad($episode->season_number, 2, '0', STR_PAD_LEFT) . 'e' . str_pad($episode->episode_number, 2, '0', STR_PAD_LEFT);
-                        Log::info("✅ Episode Upload complete: {$filename} ({$filepath}), episode_id={$episodeId}");
-
-                        // Update episode file field
-                        $episode->update(['file' => $filename]);
-
-                        // Dispatch unified convert job for episode
-                        Log::info("🚀 Dispatch ConvertVideoToHlsJob for episode: {$filename}");
-                        ConvertVideoToHlsJob::dispatch($inputPath, $outputDir, $filename, null, $episodeId);
+                        $episode->update([
+                            'file' => $filename,
+                            'hls_status' => null,
+                            'hls_progress' => 0
+                        ]);
+                        Log::info("📹 Episode file updated and HLS status reset for episode ID: " . $episodeId);
                     } else {
-                        Log::warning("⚠️ Episode not found for episode_id={$episodeId}");
+                        Log::warning("⚠️ Episode not found with ID: " . $episodeId);
                     }
-                }
-                // No valid content type found
-                else {
-                    Log::warning("⚠️ Upload complete but no movie_id or episode_id found in metadata");
-                    Log::info("Available metadata: " . json_encode($metadata));
+                } else {
+                    Log::warning("⚠️ No movie_id or episode_id found in metadata");
                 }
             } else {
-                Log::warning('⚠️ Upload complete event triggered but file is null.');
             }
         });
-        
+
         $response = $server->serve();
         return $response;
+    }
+
+    /**
+     * Check video file integrity using FFprobe
+     */
+    private function checkVideoIntegrity($filePath)
+    {
+        try {
+            // Check if file exists
+            if (!file_exists($filePath)) {
+                Log::error("File does not exist: " . $filePath);
+                return true; // Treat as corrupted
+            }
+
+            // Check file size
+            $fileSize = filesize($filePath);
+            if ($fileSize === 0) {
+                Log::error("File is empty: " . $filePath);
+                return true; // Empty file is corrupted
+            }
+
+            // Use FFprobe to check video integrity
+            $ffprobePath = $this->findFFprobe();
+            if (!$ffprobePath) {
+                Log::warning("FFprobe not found, skipping integrity check for: " . $filePath);
+                return false; // Assume not corrupted if we can't check
+            }
+
+            $command = sprintf(
+                '%s -v error -show_format -show_streams %s 2>&1',
+                escapeshellarg($ffprobePath),
+                escapeshellarg($filePath)
+            );
+
+            $output = shell_exec($command);
+            $returnCode = 0;
+
+            // Check if FFprobe executed successfully
+            if ($output === null) {
+                Log::error("FFprobe failed to execute for: " . $filePath);
+                return true; // Assume corrupted
+            }
+
+            // Check for errors in output
+            if (strpos($output, 'Invalid data found when processing input') !== false ||
+                strpos($output, 'corrupt') !== false ||
+                strpos($output, 'truncated') !== false ||
+                strpos($output, 'Invalid') !== false) {
+                Log::error("FFprobe detected corruption in: " . $filePath . " Output: " . $output);
+                return true; // File is corrupted
+            }
+
+            // Try to extract basic video information
+            $hasVideoStream = strpos($output, 'codec_type=video') !== false;
+            $hasAudioStream = strpos($output, 'codec_type=audio') !== false;
+
+            if (!$hasVideoStream && !$hasAudioStream) {
+                Log::error("No valid audio/video streams found in: " . $filePath);
+                return true; // File is corrupted
+            }
+
+            // Additional check: try to get duration
+            preg_match('/duration=([0-9.]+)/', $output, $matches);
+            if (isset($matches[1])) {
+                $duration = floatval($matches[1]);
+                if ($duration <= 0) {
+                    Log::error("Invalid duration found in: " . $filePath . " Duration: " . $duration);
+                    return true; // File is corrupted
+                }
+            }
+
+            Log::info("✅ Video integrity check passed for: " . $filePath . " Size: " . $fileSize . " bytes");
+            return false; // File is not corrupted
+
+        } catch (\Exception $e) {
+            Log::error("Error checking video integrity for " . $filePath . ": " . $e->getMessage());
+            return true; // Assume corrupted on error
+        }
+    }
+
+    /**
+     * Find FFprobe executable path
+     */
+    private function findFFprobe()
+    {
+        // Common paths for FFprobe
+        $paths = [
+            '/usr/bin/ffprobe',
+            '/usr/local/bin/ffprobe',
+            '/opt/homebrew/bin/ffprobe',
+            'ffprobe' // Try system PATH
+        ];
+
+        foreach ($paths as $path) {
+            if (is_executable($path) || $path === 'ffprobe') {
+                // Test if ffprobe actually works
+                $testCommand = $path === 'ffprobe' ? 'ffprobe -version' : escapeshellarg($path) . ' -version';
+                $output = shell_exec($testCommand . ' 2>&1');
+                
+                if ($output && strpos($output, 'ffprobe') !== false) {
+                    return $path;
+                }
+            }
+        }
+
+        return null;
     }
 }

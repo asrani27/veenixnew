@@ -55,6 +55,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('admin/movie/{movie}/upload-video', [MovieController::class, 'uploadVideo'])->name('admin.movies.upload-video');
     Route::get('admin/movies/{movie}/hls-status', [MovieController::class, 'getHlsStatus'])->name('admin.movies.hls-status');
     Route::post('admin/movies/{movie}/retry-hls-conversion', [MovieController::class, 'retryHlsConversion'])->name('admin.movies.retry-hls-conversion');
+    Route::post('admin/movies/{movie}/convert-hls', [MovieController::class, 'convertHls'])->name('admin.movies.convert-hls');
+    Route::get('admin/movies/{movie}/convert-hls/progress', [MovieController::class, 'getConversionProgress'])->name('admin.movies.convert-hls.progress');
 
     // Resumable.js Upload Routes
     Route::get('admin/resumable-upload/test', [ResumableUploadController::class, 'test'])->name('admin.resumable-upload.test');

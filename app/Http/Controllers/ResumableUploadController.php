@@ -102,11 +102,8 @@ class ResumableUploadController extends Controller
                 // Initialize HLS conversion status
                 $movie->initializeHlsConversion();
                 
-                // Get the full file path for conversion
-                $fullFilePath = Storage::disk('local')->path($finalPath);
-                
-                // Dispatch HLS conversion job
-                ConvertVideoToHlsJob::dispatch($fullFilePath, $movie);
+                // Dispatch HLS conversion job with correct parameters
+                ConvertVideoToHlsJob::dispatch($finalPath, 'temp/hls/' . $movie->slug, basename($filename), $movie->id);
             }
             
             // Return success response with file info

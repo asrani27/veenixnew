@@ -775,8 +775,8 @@ class MovieController extends Controller
                 'hls_error_message' => null
             ]);
 
-            // Dispatch the conversion job
-            ConvertVideoToHlsJob::dispatch($movie->id, $movie->file, $movie->slug);
+            // Dispatch the conversion job with correct parameters
+            ConvertVideoToHlsJob::dispatch($movie->file, 'temp/hls/' . $movie->slug, basename($movie->file), $movie->id);
 
             Log::info('HLS conversion retry dispatched', [
                 'movie_id' => $movieId,
@@ -796,6 +796,139 @@ class MovieController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to retry HLS conversion: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Convert video to HLS manually
+     */
+    public function convertHls(Request $request, $movieId)
+    {
+        try {
+            $movie = Movie::findOrFail($movieId);
+
+            // Validate request
+            $request->validate([
+                'file_url' => 'required|string'
+            ]);
+
+            // Extract file path from TUS URL
+            $fileUrl = $request->file_url;
+            $filePath = parse_url($fileUrl, PHP_URL_PATH);
+
+            Log::info("🔍 Processing TUS URL: {$fileUrl}");
+            Log::info("🔍 Extracted path: {$filePath}");
+
+            // Handle TUS URL format: /api/upload/uuid
+            if (str_contains($filePath, '/api/upload/')) {
+                // Extract just the UUID from the TUS URL
+                $filePath = basename($filePath);
+                Log::info("🔧 Extracted UUID from TUS URL: {$filePath}");
+            } else {
+                // Handle traditional file paths
+                if (str_contains($filePath, '/storage/uploads/')) {
+                    $filePath = str_replace('/storage/uploads/', '', $filePath);
+                } elseif (str_contains($filePath, '/uploads/')) {
+                    $filePath = str_replace('/uploads/', '', $filePath);
+                }
+                Log::info("🔧 Processed traditional file path: {$filePath}");
+            }
+
+            // Remove any leading slashes
+            $filePath = ltrim($filePath, '/');
+
+            // Check if file exists in storage/app/public/uploads
+            $fullFilePath = 'app/public/uploads/' . $filePath;
+
+            Log::info("🔍 Checking file existence: " . storage_path($fullFilePath));
+
+            if (!file_exists(storage_path($fullFilePath))) {
+                // Try alternative locations
+                $altPath1 = storage_path('app/uploads/' . $filePath);
+                $altPath2 = storage_path('app/' . $filePath);
+                
+                Log::warning("⚠️ File not found in primary location: {$fullFilePath}");
+                Log::info("🔍 Trying alternative location 1: {$altPath1}");
+                Log::info("🔍 Trying alternative location 2: {$altPath2}");
+
+                if (file_exists($altPath1)) {
+                    $fullFilePath = 'app/uploads/' . $filePath;
+                    Log::info("✅ Found file in alternative location 1");
+                } elseif (file_exists($altPath2)) {
+                    $fullFilePath = 'app/' . $filePath;
+                    Log::info("✅ Found file in alternative location 2");
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Video file not found in storage. Tried: ' . storage_path($fullFilePath) . ', ' . $altPath1 . ', ' . $altPath2
+                    ], 404);
+                }
+            }
+
+            // Update movie with the file path
+            $movie->update([
+                'file' => $filePath,
+                'hls_status' => 'pending',
+                'hls_progress' => 0,
+                'hls_error_message' => null
+            ]);
+
+            // Dispatch the conversion job with correct parameters
+            ConvertVideoToHlsJob::dispatch($filePath, 'temp/hls/' . $movie->slug, basename($filePath), $movie->id);
+
+            Log::info('Manual HLS conversion dispatched', [
+                'movie_id' => $movieId,
+                'movie_slug' => $movie->slug,
+                'file_path' => $filePath
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'HLS conversion started successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error starting manual HLS conversion', [
+                'movie_id' => $movieId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to start HLS conversion: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get conversion progress for a movie
+     */
+    public function getConversionProgress($movieId)
+    {
+        try {
+            $movie = Movie::findOrFail($movieId);
+
+            $status = $movie->hls_status ?? 'pending';
+            $progress = $movie->hls_progress ?? 0;
+            $message = $this->getHlsStatusMessage($movie);
+
+            return response()->json([
+                'status' => $status,
+                'progress' => $progress,
+                'message' => $message,
+                'error' => $movie->hls_error_message
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting conversion progress', [
+                'movie_id' => $movieId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'status' => 'failed',
+                'progress' => 0,
+                'message' => 'Error getting progress: ' . $e->getMessage(),
+                'error' => $e->getMessage()
             ], 500);
         }
     }
