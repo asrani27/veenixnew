@@ -934,6 +934,82 @@ class MovieController extends Controller
     }
 
     /**
+     * Get movie status and progress
+     */
+    public function getStatus($movieId)
+    {
+        try {
+            $movie = Movie::findOrFail($movieId);
+
+            return response()->json([
+                'success' => true,
+                'movie' => $movie->toArray()
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error getting movie status', [
+                'movie_id' => $movieId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to get status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Update movie status and progress
+     */
+    public function updateStatus(Request $request, $movieId)
+    {
+        try {
+            $movie = Movie::findOrFail($movieId);
+
+            $request->validate([
+                'field' => 'required|string|in:status_upload_to_local,status_progressive,status_upload_to_wasabi',
+                'status' => 'required|string|in:waiting,processing,completed,error,ready,failed',
+                'progress' => 'nullable|integer|min:0|max:100'
+            ]);
+
+            $field = $request->field;
+            $status = $request->status;
+            $progress = $request->progress ?? 0;
+
+            // Determine progress field based on status field
+            $progressField = str_replace('status_', 'progress_', $field);
+
+            // Update movie
+            $movie->update([
+                $field => $status,
+                $progressField => $progress
+            ]);
+
+            Log::info('Movie status updated', [
+                'movie_id' => $movieId,
+                'field' => $field,
+                'status' => $status,
+                'progress' => $progress
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Status updated successfully'
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error updating movie status', [
+                'movie_id' => $movieId,
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update status: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
      * Display the movie detail page.
      *
      * @param  string  $slug
@@ -968,7 +1044,6 @@ class MovieController extends Controller
                 $query->where('is_active', true)->ordered();
             }])
             ->firstOrFail();
-
 
         return view('movie-download', compact('movie'));
     }

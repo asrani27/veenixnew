@@ -18,35 +18,29 @@ class StreamController extends Controller
 
         $data = Movie::where('tmdb_id', $tmdb_id)->first();
 
-        if (!$data || empty($data->hls_master_playlist_path)) {
+        if (!$data || empty($data->file)) {
             return view('stream', [
                 'urlVideo' => null,
                 'errorMessage' => "Video Tidak Bisa Di Putar"
             ]);
         }
 
-        $filePath = $data->hls_master_playlist_path;
+        $filePath = $data->file;
         $errorMessage = null;
-        $isHls = false;
-        // Check if file is HLS (m3u8)
-        if (str_ends_with(strtolower($filePath), '.m3u8')) {
-            $isHls = true;
-            // For HLS, we need to modify the m3u8 content to use proxy URLs
-            $urlVideo = $this->getHlsProxyUrl($filePath);
+
+        // Regular video file
+        if (!session()->has("video_url_{$tmdb_id}")) {
+            $urlVideo = Storage::disk('wasabi')->temporaryUrl(
+                $filePath,
+                now()->addMinutes(180)
+            );
+            session(["video_url_{$tmdb_id}" => $urlVideo]);
         } else {
-            // Regular video file
-            if (!session()->has("video_url_{$tmdb_id}")) {
-                $urlVideo = Storage::disk('wasabi')->temporaryUrl(
-                    $filePath,
-                    now()->addMinutes(180)
-                );
-                session(["video_url_{$tmdb_id}" => $urlVideo]);
-            } else {
-                $urlVideo = session("video_url_{$tmdb_id}");
-            }
+            $urlVideo = session("video_url_{$tmdb_id}");
         }
 
-        return view('stream', compact('urlVideo', 'errorMessage', 'isHls'));
+
+        return view('stream', compact('urlVideo', 'errorMessage'));
     }
 
     public function tvStream($tmdb_id)

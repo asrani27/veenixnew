@@ -21,7 +21,6 @@
     <link rel="preload" href="/plyr/plyr.polyfilled.min.js" as="script">
     <link rel="preload" href="/plyr/jquery-3.7.1.min.js" as="script">
     <link rel="preload" href="/plyr/pb.js?v=1" as="script">
-    <link rel="preload" href="https://cdn.jsdelivr.net/npm/hls.js@latest" as="script">
     <meta name="description" content="" />
     <style>
         * {
@@ -415,11 +414,7 @@
         <div id="loading-spinner" class="loading-spinner"></div>
         <video id="main-video" preload="none" crossorigin="anonymous" data-plyr-config='{ "title": "vidio.mp4" }'
             playsinline data-poster="" muted>
-            @if($isHls ?? false)
-                <!-- HLS will be loaded programmatically -->
-            @else
-                <source src="{{$urlVideo}}" type="video/mp4" />
-            @endif
+            <source src="{{$urlVideo}}" type="video/mp4" />
         </video>
         @endif
     </div>
@@ -428,7 +423,6 @@
     <script src="/plyr/plyr.polyfilled.min.js" defer></script>
     <script src="/plyr/jquery-3.7.1.min.js" defer></script>
     <script src="/plyr/pb.js?v=1" defer></script>
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest" defer></script>
 
     <script>
         // Optimized initialization with requestAnimationFrame
@@ -442,64 +436,6 @@
             const video = document.getElementById("main-video");
             const loadingSpinner = document.getElementById("loading-spinner");
             const STORAGE_KEY = 'video-time-' + window.location.href;
-            
-            // Check if this is an HLS stream
-            const isHls = @json($isHls ?? false);
-            const hlsUrl = @json($urlVideo);
-            let hls = null;
-
-            // Initialize HLS if needed
-            function initializeHls() {
-                if (isHls && hlsUrl && typeof Hls !== 'undefined') {
-                    if (Hls.isSupported()) {
-                        hls = new Hls({
-                            debug: false,
-                            enableWorker: true,
-                            lowLatencyMode: true,
-                            backBufferLength: 90
-                        });
-                        
-                        hls.loadSource(hlsUrl);
-                        hls.attachMedia(video);
-                        
-                        hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-                            console.log('HLS manifest parsed, quality levels available:', data.levels);
-                            video.play().catch(function(error) {
-                                // Autoplay failed - user interaction required
-                            });
-                        });
-                        
-                        hls.on(Hls.Events.ERROR, function(event, data) {
-                            console.error('HLS error:', data);
-                            if (data.fatal) {
-                                switch(data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR:
-                                        console.log('Fatal network error, trying to recover...');
-                                        hls.startLoad();
-                                        break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR:
-                                        console.log('Fatal media error, trying to recover...');
-                                        hls.recoverMediaError();
-                                        break;
-                                    default:
-                                        console.error('Fatal HLS error, cannot recover');
-                                        break;
-                                }
-                            }
-                        });
-                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                        // Native HLS support (Safari)
-                        video.src = hlsUrl;
-                        video.addEventListener('loadedmetadata', function() {
-                            video.play().catch(function(error) {
-                                // Autoplay failed - user interaction required
-                            });
-                        });
-                    } else {
-                        console.error('HLS not supported');
-                    }
-                }
-            }
 
             // Optimized video event listeners
             video.addEventListener("loadeddata", function() {
@@ -568,9 +504,6 @@
             // Initialize player when scripts are loaded
             function initializePlayer() {
                 if (typeof Plyr !== 'undefined' && typeof $ !== 'undefined' && typeof PB !== 'undefined') {
-                    // Initialize HLS first if needed
-                    initializeHls();
-                    
                     player = new Plyr(video, defaultOptions);
                     
                     requestAnimationFrame(() => {

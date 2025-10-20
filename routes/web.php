@@ -19,6 +19,7 @@ use App\Livewire\Settings\Password;
 use App\Livewire\Settings\Profile;
 use Illuminate\Support\Facades\Route;
 
+//Route::get('/test/progressive/streaming', [HomeController::class, 'progressive']);
 Route::get('/', [HomeController::class, 'index'])->name('home');
 Route::get('/genre/{slug}', [HomeController::class, 'genre'])->name('genre.show');
 Route::get('/year/{year}', [YearController::class, 'show'])->name('year.show');
@@ -57,6 +58,8 @@ Route::middleware(['auth'])->group(function () {
     Route::post('admin/movies/{movie}/retry-hls-conversion', [MovieController::class, 'retryHlsConversion'])->name('admin.movies.retry-hls-conversion');
     Route::post('admin/movies/{movie}/convert-hls', [MovieController::class, 'convertHls'])->name('admin.movies.convert-hls');
     Route::get('admin/movies/{movie}/convert-hls/progress', [MovieController::class, 'getConversionProgress'])->name('admin.movies.convert-hls.progress');
+    Route::get('admin/movies/{movie}/get-status', [MovieController::class, 'getStatus'])->name('admin.movies.get-status');
+    Route::post('admin/movies/{movie}/update-status', [MovieController::class, 'updateStatus'])->name('admin.movies.update-status');
 
     // Resumable.js Upload Routes
     Route::get('admin/resumable-upload/test', [ResumableUploadController::class, 'test'])->name('admin.resumable-upload.test');
@@ -131,8 +134,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('admin/reports/{report}', [ReportController::class, 'show'])->name('admin.reports.show');
     Route::put('admin/reports/{report}', [ReportController::class, 'update'])->name('admin.reports.update');
     Route::delete('admin/reports/{report}', [ReportController::class, 'destroy'])->name('admin.reports.destroy');
-
-  
 });
 
 Route::get('login', [LoginController::class, 'index'])->name('login');

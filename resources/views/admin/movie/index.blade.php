@@ -77,9 +77,6 @@
                             <th
                                 class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-r border-gray-200">
                                 Video Status</th>
-                            <th
-                                class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-r border-gray-200">
-                                HLS Status</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">
                                 Action</th>
                         </tr>
@@ -120,50 +117,6 @@
                                     Stream
                                 </a>
                             </td>
-                            <td class="px-6 py-2 whitespace-nowrap text-sm font-medium border-r border-gray-200">
-                                @php
-                                    $hlsStatus = $item->hls_status ?? 'pending';
-                                    $hlsProgress = $item->hls_progress ?? 0;
-                                @endphp
-                                
-                                @if($hlsStatus === 'completed')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        HLS Ready
-                                    </span>
-                                @elseif($hlsStatus === 'processing')
-                                    <div class="flex items-center space-x-2">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                            <svg class="w-3 h-3 mr-1 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            Converting
-                                        </span>
-                                        <span class="text-xs text-gray-600 font-medium">{{ $hlsProgress }}%</span>
-                                    </div>
-                                    <!-- Progress Bar -->
-                                    <div class="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                                        <div class="bg-blue-600 h-1.5 rounded-full transition-all duration-300" style="width: {{ $hlsProgress }}%"></div>
-                                    </div>
-                                @elseif($hlsStatus === 'failed')
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        Failed
-                                    </span>
-                                @else
-                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                                        <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
-                                        </svg>
-                                        Pending
-                                    </span>
-                                @endif
-                            </td>
                             <td class="px-6 py-2 whitespace-nowrap text-sm font-medium">
                                 <div class="flex space-x-2">
                                     <a href="{{ route('admin.movies.edit', $item->id) }}"
@@ -203,7 +156,7 @@
                         @endforeach
                         @if (empty($data))
                         <tr>
-                            <td colspan="8"
+                            <td colspan="7"
                                 class="px-6 py-8 text-center text-sm text-gray-500 border-r border-gray-200">
                                 No movies found.
                             </td>
@@ -273,87 +226,4 @@
     </div>
 </div>
 
-<script>
-// Auto-refresh for HLS progress
-let refreshInterval;
-
-function startAutoRefresh() {
-    // Refresh every 5 seconds when there are processing jobs
-    refreshInterval = setInterval(() => {
-        checkProcessingJobs();
-    }, 5000);
-}
-
-function checkProcessingJobs() {
-    fetch(window.location.href, {
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.text())
-    .then(html => {
-        // Create a temporary DOM element to parse the response
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = html;
-        
-        // Find all HLS status cells
-        const hlsStatusCells = document.querySelectorAll('td:nth-child(7)');
-        const newHlsStatusCells = tempDiv.querySelectorAll('td:nth-child(7)');
-        
-        let hasProcessingJobs = false;
-        
-        hlsStatusCells.forEach((cell, index) => {
-            if (newHlsStatusCells[index]) {
-                const newCell = newHlsStatusCells[index];
-                
-                // Check if this is a processing job
-                if (newCell.innerHTML.includes('Converting') || newCell.innerHTML.includes('animate-spin')) {
-                    hasProcessingJobs = true;
-                    
-                    // Update the cell with new content
-                    cell.innerHTML = newCell.innerHTML;
-                }
-            }
-        });
-        
-        // If no processing jobs found, stop auto-refresh
-        if (!hasProcessingJobs) {
-            clearInterval(refreshInterval);
-            console.log('No processing jobs found, stopping auto-refresh');
-        }
-    })
-    .catch(error => {
-        console.error('Error checking processing jobs:', error);
-    });
-}
-
-// Start auto-refresh when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Check if there are any processing jobs on initial load
-    const hasProcessingJobs = document.querySelector('.animate-spin');
-    if (hasProcessingJobs) {
-        console.log('Processing jobs detected, starting auto-refresh');
-        startAutoRefresh();
-    }
-});
-
-// Stop auto-refresh when page is hidden
-document.addEventListener('visibilitychange', function() {
-    if (document.hidden) {
-        clearInterval(refreshInterval);
-    } else {
-        // When page becomes visible again, check for processing jobs
-        const hasProcessingJobs = document.querySelector('.animate-spin');
-        if (hasProcessingJobs) {
-            startAutoRefresh();
-        }
-    }
-});
-
-// Clean up interval when page is unloaded
-window.addEventListener('beforeunload', function() {
-    clearInterval(refreshInterval);
-});
-
-</script>
 @endsection

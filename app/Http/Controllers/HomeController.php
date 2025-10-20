@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Visitor;
-use App\Models\Movie;
 use App\Models\Tv;
 use App\Models\Genre;
+use App\Models\Movie;
+use App\Models\Visitor;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class HomeController extends Controller
 {
@@ -27,6 +28,15 @@ class HomeController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
+    public function progressive()
+    {
+        $urlVideo = Storage::disk('wasabi')->temporaryUrl(
+            'incognitoe1_output.mp4',
+            now()->addMinutes(180)
+        );
+
+        return view('progressive', compact('urlVideo'));
+    }
     public function index()
     {
         // Existing data
@@ -42,9 +52,9 @@ class HomeController extends Controller
         $tvShows = Tv::forHomepage()->get();
 
         return view('home', compact(
-            'featuredMovies', 
-            'tvSeries', 
-            'mostWatchedMovies', 
+            'featuredMovies',
+            'tvSeries',
+            'mostWatchedMovies',
             'ongoingTvSeries',
             'dramaKorea',
             'filmIndonesia',
@@ -65,13 +75,13 @@ class HomeController extends Controller
         // Get visitor statistics for the last 7 days
         $dailyStats = Visitor::getDailyStats(7);
         $todayStats = Visitor::getTodayStats();
-        
+
         // Get total visitors for the last 30 days
         $monthlyStats = Visitor::getDateRangeStats(
             now()->subDays(30)->toDateString(),
             now()->toDateString()
         );
-        
+
         $totalMonthlyVisits = $monthlyStats->sum('total_visits');
         $totalMonthlyUnique = $monthlyStats->sum('unique_visitors');
 
@@ -92,7 +102,7 @@ class HomeController extends Controller
     public function genre($slug)
     {
         $genre = Genre::where('slug', $slug)->firstOrFail();
-        
+
         // Get movies and TV series for this genre
         $movies = $genre->movies()->forHomepage()->get();
         $tvShows = $genre->tvs()->forHomepage()->get();
